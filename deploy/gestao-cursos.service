@@ -1,0 +1,26 @@
+[Unit]
+Description=Sistema de Gestão de Cursos (FastAPI + React) - PF Banco de Dados
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=gestao
+Group=gestao
+WorkingDirectory=/opt/gestao-cursos/backend
+EnvironmentFile=/etc/gestao-cursos/gestao.env
+ExecStart=/opt/gestao-cursos/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port __PORT__ --proxy-headers --no-server-header
+Restart=on-failure
+RestartSec=3
+# Permite ouvir na porta 80 sem rodar como root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+MemoryMax=300M
+
+[Install]
+WantedBy=multi-user.target
