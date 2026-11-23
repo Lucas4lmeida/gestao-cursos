@@ -1,12 +1,13 @@
 import { Plus, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AcoesLinha, ExcluirRegistro, FiltroAtivo, alternarAtivoRegistro, ativoParam, opcoesAtivo } from "../components/Crud";
 import {
   AreaTexto, Avatar, Botao, Busca, Cabecalho, Campo, Cartao, Carregando, Entrada, ErroCarga, FiltroSegmentado,
   Gaveta, Info, Modal, NotaSQL, SeloAtivo, SeloStatus, Tabela, Td, Th, Vazio,
 } from "../components/ui";
 import { api, qs } from "../lib/api";
-import { data, hoje, nota } from "../lib/format";
+import { data, hoje, nota, soDigitos } from "../lib/format";
 import { notificarErro, notificarSucesso, useApi, useDebounce } from "../lib/hooks";
 
 const vazio = { nome: "", email: "", telefone: "", data_nascimento: "", numero_matricula: "", data_ingresso: hoje(), observacao: "", telefone_responsavel: "" };
@@ -18,7 +19,7 @@ function FormAluno({ inicial, id, fechar, aoSalvar }: { inicial: any; id?: numbe
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
     setSalvando(true);
-    const corpo = { ...f, data_nascimento: f.data_nascimento || null };
+    const corpo = { ...f, data_nascimento: f.data_nascimento || null, telefone: soDigitos(f.telefone), telefone_responsavel: soDigitos(f.telefone_responsavel) };
     try {
       if (id) await api.put(`/api/alunos/${id}`, corpo, { acao: `Editar aluno ${f.nome}` });
       else await api.post("/api/alunos", corpo, { acao: `Cadastrar aluno ${f.nome}` });
@@ -33,18 +34,18 @@ function FormAluno({ inicial, id, fechar, aoSalvar }: { inicial: any; id?: numbe
   };
   return (
     <Modal aberto fechar={fechar} titulo={id ? "Editar aluno" : "Novo aluno"} largura="max-w-2xl"
-      subtitulo={id ? `Pessoa #${id}` : "Grava pessoa e aluno na mesma transação (gatilho RT01 verificado no COMMIT)."}
+      subtitulo={id ? `Código interno ${id}` : "Preencha os dados do estudante. Campos com * são obrigatórios."}
       rodape={<><Botao variante="secundario" onClick={fechar}>Cancelar</Botao><Botao type="submit" form="form-aluno" carregando={salvando}>Salvar</Botao></>}>
       <form id="form-aluno" onSubmit={salvar} className="grid gap-4 sm:grid-cols-2">
         <Campo rotulo="Nome completo" obrigatorio className="sm:col-span-2"><Entrada value={f.nome} onChange={set("nome")} required /></Campo>
-        <Campo rotulo="E-mail" obrigatorio dica="Único entre todas as pessoas (uk_pessoa_email)"><Entrada value={f.email} onChange={set("email")} required /></Campo>
-        <Campo rotulo="Telefone" dica="Somente dígitos, com DDD (10 ou 11)"><Entrada value={f.telefone ?? ""} onChange={set("telefone")} placeholder="11987654321" /></Campo>
+        <Campo rotulo="E-mail" obrigatorio dicaTecnica="uk_pessoa_email · ck_pessoa_email"><Entrada type="text" inputMode="email" autoComplete="off" value={f.email} onChange={set("email")} required /></Campo>
+        <Campo rotulo="Telefone" dica="Com DDD" dicaTecnica="ck_pessoa_telefone"><Entrada type="tel" value={f.telefone ?? ""} onChange={set("telefone")} placeholder="(11) 98765-4321" /></Campo>
         <Campo rotulo="Data de nascimento"><Entrada type="date" value={f.data_nascimento ?? ""} onChange={set("data_nascimento")} /></Campo>
-        <Campo rotulo="Nº de matrícula" obrigatorio dica="Único (uk_aluno_numero_matricula)"><Entrada value={f.numero_matricula} onChange={set("numero_matricula")} required /></Campo>
+        <Campo rotulo="Nº de matrícula" obrigatorio dicaTecnica="uk_aluno_numero_matricula"><Entrada value={f.numero_matricula} onChange={set("numero_matricula")} required /></Campo>
         <Campo rotulo="Data de ingresso" obrigatorio><Entrada type="date" value={f.data_ingresso ?? ""} onChange={set("data_ingresso")} required /></Campo>
-        <Campo rotulo="Telefone do responsável"><Entrada value={f.telefone_responsavel ?? ""} onChange={set("telefone_responsavel")} /></Campo>
+        <Campo rotulo="Telefone do responsável" dica="Com DDD"><Entrada type="tel" value={f.telefone_responsavel ?? ""} onChange={set("telefone_responsavel")} placeholder="(11) 98765-4321" /></Campo>
         <Campo rotulo="Observação" className="sm:col-span-2"><AreaTexto value={f.observacao ?? ""} onChange={set("observacao")} /></Campo>
-        <div className="sm:col-span-2"><NotaSQL>As regras (formato do e-mail, telefone, unicidade) são validadas pelo PostgreSQL; a API apenas repassa o erro.</NotaSQL></div>
+        <div className="sm:col-span-2"><NotaSQL>INSERT pessoa + INSERT aluno em uma transação; RT01 verificado no COMMIT. Formato de e-mail/telefone e unicidade são validados pelo PostgreSQL.</NotaSQL></div>
       </form>
     </Modal>
   );
@@ -70,11 +71,11 @@ function DetalheAluno({ id, fechar, editar }: { id: number; fechar: () => void; 
             <Info rotulo="Telefone">{a.telefone}</Info>
             <Info rotulo="Nascimento">{data(a.data_nascimento)}</Info>
             <Info rotulo="Tel. responsável">{a.telefone_responsavel}</Info>
-            <Info rotulo="ID / tipo">#{a.id_pessoa} · {a.tipo_pessoa}</Info>
+            <Info rotulo="Código interno">{a.id_pessoa}</Info>
             <div className="col-span-2"><Info rotulo="Observação">{a.observacao}</Info></div>
           </dl>
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Histórico de matrículas <span className="font-normal text-slate-400">(vw_historico_matricula)</span></h3>
+            <h3 className="mb-2 font-serif text-base font-semibold text-brand-900">Histórico de matrículas</h3>
             {a.matriculas.length === 0 ? <p className="text-sm text-slate-500">Nenhuma matrícula.</p> : (
               <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
                 {a.matriculas.map((m: any) => (
@@ -105,6 +106,10 @@ export default function Alunos() {
   const [form, setForm] = useState<{ inicial: any; id?: number } | null>(null);
   const [ver, setVer] = useState<number | null>(null);
   const [excluir, setExcluir] = useState<any>(null);
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get("novo")) { setForm({ inicial: vazio }); setParams({}, { replace: true }); }
+  }, [params, setParams]);
 
   const editar = (a: any) => {
     setVer(null);
@@ -116,11 +121,11 @@ export default function Alunos() {
 
   return (
     <div>
-      <Cabecalho icone={<Users className="h-5 w-5" />} titulo="Alunos" subtitulo="Especialização de pessoa: cada aluno é gravado em pessoa + aluno."
+      <Cabecalho icone={<Users className="h-5 w-5" />} titulo="Alunos" subtitulo="Cadastro dos estudantes da instituição, com dados de contato e histórico de matrículas."
         acoes={<Botao icone={<Plus className="h-4 w-4" />} onClick={() => setForm({ inicial: vazio })}>Novo aluno</Botao>} />
       <Cartao>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-          <Busca valor={busca} onChange={setBusca} placeholder="Buscar por nome, e-mail ou matrícula (ILIKE)" />
+          <Busca valor={busca} onChange={setBusca} placeholder="Buscar por nome, e-mail ou nº de matrícula" />
           <FiltroSegmentado opcoes={opcoesAtivo} valor={filtro} onChange={setFiltro} />
         </div>
         {erro ? <ErroCarga msg={erro} tentar={recarregar} /> : carregando && !dados ? <Carregando /> : dados?.length === 0 ? (

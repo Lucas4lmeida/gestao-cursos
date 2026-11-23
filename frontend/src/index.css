@@ -3,15 +3,15 @@
 @tailwind utilities;
 
 @layer base {
-  html { -webkit-font-smoothing: antialiased; }
-  body { @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100; font-feature-settings: "cv11", "ss01"; }
   :root { color-scheme: light; }
-  .dark { color-scheme: dark; }
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body { @apply bg-papel text-slate-800; font-size: 15.5px; }
+  h1, h2, h3 { @apply text-brand-900; }
+  :focus-visible { outline: 2px solid #bf972a; outline-offset: 2px; }
 }
 
 .sql .sql-kw { color: #c4b5fd; font-weight: 600; }
 .sql .sql-str { color: #86efac; }
 .sql .sql-num { color: #fdba74; }
 
-/* rolagem discreta */
-* { scrollbar-width: thin; scrollbar-color: rgb(148 163 184 / .4) transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgb(148 163 184 / .5) transparent; }

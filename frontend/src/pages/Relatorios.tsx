@@ -6,6 +6,7 @@ import { Cabecalho, Cartao, Carregando, Entrada, ErroCarga, Selecao, Selo, SeloS
 import { Rastro, api, qs, traceStore } from "../lib/api";
 import { formatarSQL, nota, realcarSQL } from "../lib/format";
 import { useDebounce } from "../lib/hooks";
+import { useModoDemo } from "../lib/sessao";
 
 /** Carrega um relatório e guarda o SQL que o back-end executou para gerá-lo. */
 function useRelatorio(url: string, acao: string) {
@@ -33,7 +34,8 @@ function useRelatorio(url: string, acao: string) {
 
 function PainelSQL({ sql, destaque }: { sql: string[]; destaque: string }) {
   const [aberto, setAberto] = useState(true);
-  if (!sql.length) return null;
+  const demo = useModoDemo();
+  if (!demo || !sql.length) return null;
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
       <button onClick={() => setAberto(!aberto)} className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs text-slate-400 hover:text-slate-200">
@@ -56,7 +58,7 @@ function Moldura({ titulo, descricao, controles, children, sql, destaque, erro, 
       <Cartao className="p-5">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">{titulo}</h3>
+            <h3 className="font-serif text-xl font-semibold text-brand-900">{titulo}</h3>
             <p className="text-sm text-slate-500">{descricao}</p>
           </div>
           {controles}
@@ -71,7 +73,7 @@ function Moldura({ titulo, descricao, controles, children, sql, destaque, erro, 
 function Desempenho() {
   const r = useRelatorio("/api/relatorios/desempenho-cursos", "Relatório: desempenho por curso");
   return (
-    <Moldura titulo="Desempenho por curso" descricao="Totais e médias agregados por curso (COUNT, COUNT FILTER, AVG, MIN, MAX)." destaque="GROUP BY + agregação" {...r} tentar={r.carregar}>
+    <Moldura titulo="Desempenho por curso" descricao="Matrículas por situação e estatísticas de notas em cada curso." destaque="GROUP BY + agregação" {...r} tentar={r.carregar}>
       {r.dados && (<>
         <div className="mb-6 h-56">
           <ResponsiveContainer>
@@ -80,10 +82,10 @@ function Desempenho() {
               <XAxis dataKey="curso" tick={{ fontSize: 11, fill: "#94a3b8" }} tickFormatter={(v: string) => v.split(" ").filter((w) => w.length > 2).map((w) => w[0]).join("").toUpperCase()} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
               <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="ativas" stackId="a" name="Ativas" fill="#10b981" />
-              <Bar dataKey="concluidas" stackId="a" name="Concluídas" fill="#0ea5e9" />
-              <Bar dataKey="trancadas" stackId="a" name="Trancadas" fill="#f59e0b" />
-              <Bar dataKey="canceladas" stackId="a" name="Canceladas" fill="#f43f5e" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="ativas" stackId="a" name="Ativas" fill="#1f7a5a" />
+              <Bar dataKey="concluidas" stackId="a" name="Concluídas" fill="#2c4d85" />
+              <Bar dataKey="trancadas" stackId="a" name="Trancadas" fill="#bf972a" />
+              <Bar dataKey="canceladas" stackId="a" name="Canceladas" fill="#9f2a3a" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -111,9 +113,9 @@ function TurmasHaving() {
   const m = useDebounce(min, 350);
   const r = useRelatorio(`/api/relatorios/turmas-por-matriculas${qs({ minimo: m })}`, `Relatório: turmas com ao menos ${m} matrículas`);
   return (
-    <Moldura titulo="Turmas com mais matrículas" descricao="Agrupa matrículas por turma e mantém só as turmas que atingem o mínimo informado." destaque="HAVING count(*) >= mínimo" {...r} tentar={r.carregar}
+    <Moldura titulo="Turmas com mais matrículas" descricao="Turmas que atingem o número mínimo de matrículas escolhido." destaque="HAVING count(*) >= mínimo" {...r} tentar={r.carregar}
       controles={<label className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">Mínimo de matrículas
-        <input type="range" min={1} max={10} value={min} onChange={(e) => setMin(Number(e.target.value))} className="accent-brand-600" />
+        <input type="range" min={1} max={10} value={min} onChange={(e) => setMin(Number(e.target.value))} className="accent-brand-800" />
         <span className="w-6 text-center font-mono font-semibold">{min}</span></label>}>
       {r.dados?.length === 0 ? <Vazio titulo="Nenhuma turma atinge esse mínimo" texto="O HAVING filtrou todos os grupos." /> : r.dados && (
         <Tabela>
@@ -123,7 +125,7 @@ function TurmasHaving() {
               <tr key={t.id_turma}>
                 <Td className="whitespace-nowrap font-mono font-medium text-slate-900 dark:text-white">{t.codigo}/{t.ano_letivo}</Td>
                 <Td>{t.curso}</Td>
-                <Td><div className="flex items-center gap-2"><div className="h-2 w-24 rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-2 rounded-full bg-brand-500" style={{ width: `${Math.min(100, t.matriculas * 10)}%` }} /></div><b>{t.matriculas}</b></div></Td>
+                <Td><div className="flex items-center gap-2"><div className="h-2 w-24 rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-2 rounded-full bg-brand-700" style={{ width: `${Math.min(100, t.matriculas * 10)}%` }} /></div><b>{t.matriculas}</b></div></Td>
                 <Td>{nota(t.media_notas)}</Td>
               </tr>
             ))}
@@ -139,7 +141,7 @@ function CargaDocente() {
   const m = useDebounce(min, 350);
   const r = useRelatorio(`/api/relatorios/carga-docente${qs({ minimo: m })}`, `Relatório: professores com carga >= ${m}h`);
   return (
-    <Moldura titulo="Carga docente semanal" descricao="Soma da carga semanal das alocações de cada professor, filtrada pelo mínimo de horas." destaque="SUM + HAVING" {...r} tentar={r.carregar}
+    <Moldura titulo="Carga docente semanal" descricao="Professores cuja carga horária semanal somada atinge o mínimo informado." destaque="SUM + HAVING" {...r} tentar={r.carregar}
       controles={<label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">Carga mínima (h)
         <Entrada type="number" value={min} onChange={(e) => setMin(Number(e.target.value))} className="!h-9 w-20" /></label>}>
       {r.dados?.length === 0 ? <Vazio titulo="Nenhum professor com essa carga" /> : r.dados && (
@@ -167,7 +169,7 @@ function Historico() {
   useEffect(() => { api.get("/api/opcoes", { silencioso: true }).then(setOpcoes).catch(() => {}); }, []);
   const r = useRelatorio(`/api/relatorios/historico${qs(f)}`, "Relatório: histórico acadêmico (JOIN)");
   return (
-    <Moldura titulo="Histórico acadêmico" descricao="Junta matrícula, aluno, pessoa, turma e curso em uma única consulta." destaque="JOIN de 5 tabelas" {...r} tentar={r.carregar}
+    <Moldura titulo="Histórico acadêmico" descricao="Trajetória acadêmica dos alunos: curso, turma, situação e nota." destaque="JOIN de 5 tabelas" {...r} tentar={r.carregar}
       controles={<div className="flex flex-wrap gap-2">
         <Selecao value={f.curso} onChange={(e) => setF({ ...f, curso: e.target.value })} className="!h-9 w-48"><option value="">Todos os cursos</option>{opcoes?.cursos.map((c: any) => <option key={c.id} value={c.id}>{c.nome}</option>)}</Selecao>
         <Selecao value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })} className="!h-9 w-36"><option value="">Status</option>{["Ativa", "Trancada", "Cancelada", "Concluída"].map((s) => <option key={s}>{s}</option>)}</Selecao>
@@ -221,17 +223,18 @@ const ABAS = [
 
 export default function Relatorios() {
   const [aba, setAba] = useState(ABAS[0].id);
+  const demo = useModoDemo();
   const Atual = ABAS.find((a) => a.id === aba)!.C;
   return (
     <div>
-      <Cabecalho icone={<BarChart3 className="h-5 w-5" />} titulo="Relatórios" subtitulo="Consultas analíticas executadas no PostgreSQL. O SQL de cada relatório aparece logo abaixo do resultado." />
-      <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
+      <Cabecalho icone={<BarChart3 className="h-5 w-5" />} titulo="Relatórios" subtitulo="Indicadores acadêmicos, histórico e carga docente, calculados a partir dos registros atuais." />
+      <div className="mb-5 flex gap-1 overflow-x-auto rounded-lg border border-slate-200 bg-white p-1">
         {ABAS.map((a) => (
           <button key={a.id} onClick={() => setAba(a.id)}
-            className={clsx("flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition",
-              aba === a.id ? "bg-brand-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800")}>
+            className={clsx("flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-[14px] font-semibold transition",
+              aba === a.id ? "bg-brand-800 text-white" : "text-slate-600 hover:bg-slate-100")}>
             {a.rotulo}
-            <span className={clsx("rounded px-1.5 py-0.5 font-mono text-[10px]", aba === a.id ? "bg-white/20" : "bg-slate-100 text-slate-500 dark:bg-slate-800")}>{a.tag}</span>
+            {demo && <span className={clsx("rounded px-1.5 py-0.5 font-mono text-[10px]", aba === a.id ? "bg-white/20" : "bg-slate-100 text-slate-500")}>{a.tag}</span>}
           </button>
         ))}
       </div>

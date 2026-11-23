@@ -1,10 +1,10 @@
-import { ArrowLeft, CalendarDays, ClipboardCheck, Crown, MapPin, Pencil, Plus, Power, Trash2, UserPlus, Zap } from "lucide-react";
+import { CalendarDays, ClipboardCheck, Crown, MapPin, Pencil, Plus, Power, Trash2, UserPlus, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ExcluirRegistro, alternarAtivoRegistro } from "../components/Crud";
 import {
   Avatar, Botao, BotaoIcone, Busca, Cabecalho, Campo, Cartao, Carregando, Confirmar, Entrada, ErroCarga, Modal,
-  NotaSQL, Selecao, Selo, SeloAtivo, SeloStatus, Tabela, Td, Th, Vazio,
+  NotaSQL, Selecao, TituloSecao, Selo, SeloAtivo, SeloStatus, Tabela, Td, Th, Vazio,
 } from "../components/ui";
 import { api } from "../lib/api";
 import { data, hoje, nota } from "../lib/format";
@@ -60,7 +60,7 @@ function NovaAlocacao({ idTurma, fechar, aoSalvar }: { idTurma: number; fechar: 
     } catch (err) { notificarErro(err); } finally { setSalvando(false); }
   };
   return (
-    <Modal aberto fechar={fechar} titulo="Nova alocação" subtitulo="Professor × Disciplina × Turma" largura="max-w-xl"
+    <Modal aberto fechar={fechar} titulo="Alocar professor" subtitulo="Defina o professor, a disciplina e a carga semanal nesta turma." largura="max-w-xl"
       rodape={<><Botao variante="secundario" onClick={fechar}>Cancelar</Botao><Botao type="submit" form="form-al" carregando={salvando}>Alocar</Botao></>}>
       <form id="form-al" onSubmit={salvar} className="grid gap-4 sm:grid-cols-2">
         <Campo rotulo="Professor" obrigatorio className="sm:col-span-2">
@@ -75,7 +75,7 @@ function NovaAlocacao({ idTurma, fechar, aoSalvar }: { idTurma: number; fechar: 
             {op?.disciplinas.map((d: any) => <option key={d.id} value={d.id}>{d.nome}</option>)}
           </Selecao>
         </Campo>
-        <Campo rotulo="Carga semanal (h)" obrigatorio dica="CHECK entre 1 e 60"><Entrada type="number" value={a.carga_horaria_semanal} onChange={set("carga_horaria_semanal")} required /></Campo>
+        <Campo rotulo="Carga semanal (horas)" obrigatorio dica="Entre 1 e 60 horas" dicaTecnica="ck_alocacao_carga_semanal"><Entrada type="number" value={a.carga_horaria_semanal} onChange={set("carga_horaria_semanal")} required /></Campo>
         <Campo rotulo="Início" obrigatorio><Entrada type="date" value={a.data_inicio} onChange={set("data_inicio")} required /></Campo>
         <Campo rotulo="Função" className="sm:col-span-2"><Entrada value={a.funcao} onChange={set("funcao")} /></Campo>
       </form>
@@ -97,7 +97,7 @@ function MatricularLote({ t, fechar, aoSalvar }: { t: any; fechar: () => void; a
     setSalvando(true);
     try {
       const r = await api.post("/api/matriculas/lote", { id_turma: t.id_turma, alunos: sel, data_matricula: dataM }, { acao: `Matricular ${sel.length} aluno(s) em lote na turma ${t.codigo}` });
-      notificarSucesso(`${r.inseridas} matrícula(s) criada(s)`, "Todas na mesma transação, com status DEFAULT 'Ativa'.");
+      notificarSucesso(`${r.inseridas} matrícula(s) registrada(s)`, "Todas na mesma transação, com status DEFAULT 'Ativa'.");
       aoSalvar();
       fechar();
     } catch (err) { notificarErro(err); } finally { setSalvando(false); }
@@ -105,7 +105,7 @@ function MatricularLote({ t, fechar, aoSalvar }: { t: any; fechar: () => void; a
 
   return (
     <Modal aberto fechar={fechar} titulo={`Matricular alunos em ${t.codigo}/${t.ano_letivo}`} largura="max-w-2xl"
-      subtitulo="Operação composta: vários INSERT em uma única transação (tudo ou nada)."
+      subtitulo="Selecione os alunos. As matrículas são registradas todas juntas ou nenhuma."
       rodape={<><span className="mr-auto self-center text-xs text-slate-500">{sel.length} selecionado(s)</span>
         <Botao variante="secundario" onClick={fechar}>Cancelar</Botao>
         <Botao onClick={salvar} carregando={salvando} disabled={sel.length === 0}>Matricular {sel.length > 0 && `(${sel.length})`}</Botao></>}>
@@ -113,7 +113,7 @@ function MatricularLote({ t, fechar, aoSalvar }: { t: any; fechar: () => void; a
         <Busca valor={busca} onChange={setBusca} placeholder="Filtrar alunos" />
         <Entrada type="date" value={dataM} onChange={(e) => setDataM(e.target.value)} className="sm:w-44" />
       </div>
-      <div className="mb-3"><NotaSQL>Alunos já matriculados aparecem marcados. Se você incluir um deles, a PK (id_aluno, id_turma) é violada e <b>nenhuma</b> matrícula do lote é gravada (ROLLBACK).</NotaSQL></div>
+      <div className="mb-3"><NotaSQL>N INSERT em matricula numa só transação. Incluir um aluno já matriculado viola pk_matricula (23505) e o lote inteiro sofre ROLLBACK.</NotaSQL></div>
       <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
         {alunos.map((a: any) => {
           const ja = jaMatriculados.has(a.id);
@@ -149,9 +149,9 @@ function LancarNotas({ t, fechar, aoSalvar }: { t: any; fechar: () => void; aoSa
   };
   return (
     <Modal aberto fechar={fechar} titulo={`Lançar notas — ${t.codigo}/${t.ano_letivo}`} largura="max-w-2xl"
-      subtitulo="Operação composta: atualiza todas as matrículas na mesma transação."
+      subtitulo="Informe a nota final (0 a 10) e a situação de cada aluno."
       rodape={<><Botao variante="secundario" onClick={fechar}>Cancelar</Botao><Botao onClick={salvar} carregando={salvando}>Salvar notas</Botao></>}>
-      <div className="mb-3"><NotaSQL>A nota é validada pelo CHECK <b>ck_matricula_nota</b> (0 a 10). Uma única nota inválida desfaz o lançamento inteiro.</NotaSQL></div>
+      <div className="mb-3"><NotaSQL>Vários UPDATE em matricula numa só transação. Uma nota fora de 0–10 viola ck_matricula_nota (23514) e desfaz o lançamento inteiro.</NotaSQL></div>
       <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
         {linhas.map((l, i) => (
           <div key={l.id_aluno} className="flex items-center gap-3 px-4 py-2.5">
@@ -179,7 +179,7 @@ export default function TurmaDetalhe() {
     setRemovendo(true);
     try {
       await api.del(`/api/turmas/${id}/alocacoes/${removerAloc.id_professor}/${removerAloc.id_disciplina}`, { acao: `Remover alocação de ${removerAloc.professor} em ${removerAloc.disciplina}` });
-      notificarSucesso("Alocação removida");
+      notificarSucesso("Professor removido da turma", "DELETE FROM alocacao; RT02 aprovado no COMMIT");
       recarregar();
     } catch (e) { notificarErro(e); } finally { setRemovendo(false); setRemoverAloc(null); }
   };
@@ -198,9 +198,9 @@ export default function TurmaDetalhe() {
 
   return (
     <div>
-      <Link to="/turmas" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-brand-600"><ArrowLeft className="h-4 w-4" />Turmas</Link>
-      <Cabecalho
-        titulo={`${t.codigo} / ${t.ano_letivo}`}
+            <Cabecalho
+        titulo={`Turma ${t.codigo} / ${t.ano_letivo}`}
+        trilha={[{ rotulo: "Turmas", to: "/turmas" }]}
         subtitulo={<span className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <span>{t.curso}</span>
           <span className="inline-flex items-center gap-1"><Crown className="h-3.5 w-3.5 text-amber-500" />{t.coordenador}</span>
@@ -217,13 +217,8 @@ export default function TurmaDetalhe() {
 
       <div className="grid gap-6 xl:grid-cols-5">
         <Cartao className="xl:col-span-2">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white">Alocações</h3>
-              <p className="text-xs text-slate-500">Professor × Disciplina nesta turma</p>
-            </div>
-            <Botao tamanho="sm" variante="suave" icone={<Plus className="h-3.5 w-3.5" />} onClick={() => setModal("alocar")}>Alocar</Botao>
-          </div>
+          <TituloSecao titulo="Corpo docente" subtitulo="Professores e disciplinas desta turma"
+            acoes={<Botao tamanho="sm" variante="suave" icone={<Plus className="h-3.5 w-3.5" />} onClick={() => setModal("alocar")}>Alocar professor</Botao>} />
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {t.alocacoes.map((a: any) => (
               <li key={`${a.id_professor}-${a.id_disciplina}`} className="flex items-center gap-3 px-5 py-3">
@@ -232,27 +227,25 @@ export default function TurmaDetalhe() {
                   <div className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{a.disciplina}</div>
                   <div className="truncate text-xs text-slate-500">{a.professor} · {a.carga_horaria_semanal} h/sem {a.funcao ? `· ${a.funcao}` : ""}</div>
                 </div>
-                <BotaoIcone titulo="Remover alocação (DELETE)" onClick={() => setRemoverAloc(a)}><Trash2 className="h-4 w-4" /></BotaoIcone>
+                <BotaoIcone titulo="Remover professor da turma" onClick={() => setRemoverAloc(a)}><Trash2 className="h-4 w-4" /></BotaoIcone>
               </li>
             ))}
           </ul>
-          <div className="m-4 flex gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-            <Zap className="h-4 w-4 shrink-0" />
-            <span>Gatilho <b>RT02</b>: a turma precisa manter ao menos uma alocação. Tente remover a última para ver o PostgreSQL bloquear.</span>
+          <div className="m-4 space-y-2">
+            <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
+              <Zap className="h-4 w-4 shrink-0" />
+              <span>A turma precisa manter pelo menos um professor alocado.</span>
+            </div>
+            <NotaSQL>Gatilhos trg_rt02_serializa (BEFORE DELETE) e trg_rt02_alocacao (diferido, RT02): remover a última alocação é rejeitado no COMMIT.</NotaSQL>
           </div>
         </Cartao>
 
         <Cartao className="xl:col-span-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white">Matrículas ({t.matriculas.length})</h3>
-              <p className="text-xs text-slate-500">Lidas da VIEW vw_historico_matricula</p>
-            </div>
-            <div className="flex gap-2">
+          <TituloSecao titulo={`Alunos matriculados (${t.matriculas.length})`} subtitulo="Situação e nota final de cada estudante"
+            acoes={<>
               <Botao tamanho="sm" variante="secundario" icone={<ClipboardCheck className="h-3.5 w-3.5" />} onClick={() => setModal("notas")} disabled={t.matriculas.length === 0}>Lançar notas</Botao>
               <Botao tamanho="sm" icone={<UserPlus className="h-3.5 w-3.5" />} onClick={() => setModal("lote")}>Matricular alunos</Botao>
-            </div>
-          </div>
+            </>} />
           {t.matriculas.length === 0 ? <Vazio titulo="Nenhum aluno matriculado" texto="Use “Matricular alunos” para inserir vários de uma vez." /> : (
             <Tabela>
               <thead><tr><Th>Aluno</Th><Th className="hidden sm:table-cell">Matrícula em</Th><Th>Nota</Th><Th>Status</Th><Th /></tr></thead>
@@ -276,11 +269,11 @@ export default function TurmaDetalhe() {
       {modal === "alocar" && <NovaAlocacao idTurma={t.id_turma} fechar={() => setModal(null)} aoSalvar={recarregar} />}
       {modal === "lote" && <MatricularLote t={t} fechar={() => setModal(null)} aoSalvar={recarregar} />}
       {modal === "notas" && <LancarNotas t={t} fechar={() => setModal(null)} aoSalvar={recarregar} />}
-      <Confirmar aberto={!!removerAloc} fechar={() => setRemoverAloc(null)} titulo="Remover alocação?" perigo rotulo="Remover" carregando={removendo}
+      <Confirmar aberto={!!removerAloc} fechar={() => setRemoverAloc(null)} titulo="Remover professor da turma?" perigo rotulo="Remover" carregando={removendo}
         confirmar={confirmarRemocao}
         texto={removerAloc && <>
-          <p>Será executado <code className="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">DELETE FROM alocacao</code> para <b>{removerAloc.professor}</b> em <b>{removerAloc.disciplina}</b>.</p>
-          {t.alocacoes.length === 1 && <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">Esta é a última alocação da turma: o gatilho RT02 deve rejeitar a operação no COMMIT.</p>}
+          <p>Remover <b>{removerAloc.professor}</b> da disciplina <b>{removerAloc.disciplina}</b> nesta turma?</p>
+          {t.alocacoes.length === 1 && <p className="mt-2 rounded-md bg-amber-50 p-2 text-[13px] text-amber-900">Este é o único professor da turma. O sistema não permitirá deixá-la sem professor.</p>}
         </>} />
       <ExcluirRegistro alvo={excluir} fechar={() => setExcluir(null)} url={`/api/turmas/${id}`} descricao={`a turma ${t.codigo}/${t.ano_letivo}`} aoConcluir={() => navegar("/turmas")} />
     </div>

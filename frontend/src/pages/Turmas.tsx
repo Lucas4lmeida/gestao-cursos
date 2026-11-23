@@ -1,9 +1,9 @@
 import { CalendarDays, MapPin, Plus, School, Trash2, Users, Zap } from "lucide-react";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FiltroAtivo, ativoParam, opcoesAtivo } from "../components/Crud";
 import {
-  Botao, BotaoIcone, Busca, Cabecalho, Campo, Cartao, Carregando, Entrada, ErroCarga, FiltroSegmentado, Modal,
+  Botao, BotaoIcone, Busca, Cabecalho, Campo, Cartao, Carregando, Entrada, ErroCarga, FiltroSegmentado, Modal, NotaSQL,
   Selecao, Selo, SeloAtivo, Vazio,
 } from "../components/ui";
 import { api, qs } from "../lib/api";
@@ -30,7 +30,7 @@ function NovaTurma({ fechar, aoSalvar }: { fechar: () => void; aoSalvar: (id: nu
         id_curso: Number(f.id_curso),
         alocacoes: alocs.map((a) => ({ ...a, id_professor: Number(a.id_professor), id_disciplina: Number(a.id_disciplina), carga_horaria_semanal: Number(a.carga_horaria_semanal) })),
       }, { acao: `Criar turma ${f.codigo} com ${alocs.length} alocação(ões)` });
-      notificarSucesso("Turma criada", `INSERT turma + ${alocs.length} INSERT alocacao em uma transação; RT02 aprovado no COMMIT.`);
+      notificarSucesso("Turma criada com sucesso", `INSERT turma + ${alocs.length} INSERT alocacao em uma transação; RT02 aprovado no COMMIT.`);
       aoSalvar(r.id_turma);
       fechar();
     } catch (err) {
@@ -42,12 +42,12 @@ function NovaTurma({ fechar, aoSalvar }: { fechar: () => void; aoSalvar: (id: nu
 
   return (
     <Modal aberto fechar={fechar} titulo="Nova turma" largura="max-w-3xl"
-      subtitulo="Operação composta: a turma e suas alocações são gravadas na mesma transação."
+      subtitulo="Informe os dados da turma e os professores responsáveis por cada disciplina."
       rodape={<><Botao variante="secundario" onClick={fechar}>Cancelar</Botao><Botao type="submit" form="form-turma" carregando={salvando}>Criar turma</Botao></>}>
       <form id="form-turma" onSubmit={salvar} className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-4">
-          <Campo rotulo="Código" obrigatorio dica="Único por ano"><Entrada value={f.codigo} onChange={set("codigo")} placeholder="ADS-3C" required /></Campo>
-          <Campo rotulo="Ano letivo" obrigatorio dica="2000 a 2100"><Entrada type="number" value={f.ano_letivo} onChange={set("ano_letivo")} required /></Campo>
+          <Campo rotulo="Código" obrigatorio dica="Não pode se repetir no mesmo ano" dicaTecnica="uk_turma_codigo_ano"><Entrada value={f.codigo} onChange={set("codigo")} placeholder="ADS-3C" required /></Campo>
+          <Campo rotulo="Ano letivo" obrigatorio dicaTecnica="ck_turma_ano: 2000 a 2100"><Entrada type="number" value={f.ano_letivo} onChange={set("ano_letivo")} required /></Campo>
           <Campo rotulo="Curso" obrigatorio className="sm:col-span-2">
             <Selecao value={f.id_curso} onChange={set("id_curso")} required>
               <option value="">Selecione…</option>
@@ -61,8 +61,8 @@ function NovaTurma({ fechar, aoSalvar }: { fechar: () => void; aoSalvar: (id: nu
         <div>
           <div className="mb-2 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Alocações (professor + disciplina)</h3>
-              <p className="text-xs text-slate-500">Inseridas na mesma transação da turma.</p>
+              <h3 className="font-serif text-base font-semibold text-brand-900">Professores e disciplinas</h3>
+              <p className="text-[13px] text-slate-500">Toda turma precisa de pelo menos um professor alocado.</p>
             </div>
             <Botao type="button" tamanho="sm" variante="suave" icone={<Plus className="h-3.5 w-3.5" />} onClick={() => setAlocs([...alocs, alocacaoVazia()])}>Adicionar</Botao>
           </div>
@@ -91,9 +91,10 @@ function NovaTurma({ fechar, aoSalvar }: { fechar: () => void; aoSalvar: (id: nu
             {alocs.length === 0 && (
               <div className="flex gap-3 rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
                 <Zap className="h-4 w-4 shrink-0" />
-                <span>Sem alocações, o gatilho <b>trg_rt02_turma</b> (RT02) rejeitará a transação no COMMIT. Você pode tentar mesmo assim para demonstrar o gatilho.</span>
+                <span>Adicione ao menos um professor. Sem isso, o sistema não permitirá criar a turma.</span>
               </div>
             )}
+            <NotaSQL>INSERT turma + N INSERT alocacao em uma transação; o gatilho diferido trg_rt02_turma (RT02) é verificado no COMMIT.</NotaSQL>
           </div>
         </div>
       </form>
@@ -108,10 +109,14 @@ export default function Turmas() {
   const { dados, carregando, erro, recarregar } = useApi<any[]>(`/api/turmas${qs({ q, ativo: ativoParam(filtro) })}`, q ? `Buscar turmas por "${q}"` : "Listar turmas");
   const [nova, setNova] = useState(false);
   const navegar = useNavigate();
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get("nova")) { setNova(true); setParams({}, { replace: true }); }
+  }, [params, setParams]);
 
   return (
     <div>
-      <Cabecalho icone={<School className="h-5 w-5" />} titulo="Turmas" subtitulo="Ofertas de um curso por ano letivo, com professores e disciplinas alocados."
+      <Cabecalho icone={<School className="h-5 w-5" />} titulo="Turmas" subtitulo="Ofertas de cada curso por ano letivo, com horário, sala e corpo docente."
         acoes={<Botao icone={<Plus className="h-4 w-4" />} onClick={() => setNova(true)}>Nova turma</Botao>} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Busca valor={busca} onChange={setBusca} placeholder="Buscar por código, curso ou sala" />
@@ -126,7 +131,7 @@ export default function Turmas() {
               <Cartao className={`h-full p-5 transition group-hover:-translate-y-0.5 group-hover:shadow-lg ${!t.ativo ? "opacity-70" : ""}`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="font-mono text-lg font-semibold text-slate-900 group-hover:text-brand-600 dark:text-white">{t.codigo}</div>
+                    <div className="font-serif text-xl font-semibold text-brand-900 group-hover:underline">{t.codigo}</div>
                     <div className="text-xs text-slate-500">{t.curso}</div>
                   </div>
                   <div className="flex flex-col items-end gap-1"><Selo cor="roxo">{t.ano_letivo}</Selo><SeloAtivo ativo={t.ativo} /></div>

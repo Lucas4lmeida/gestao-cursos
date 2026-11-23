@@ -2,9 +2,10 @@
 
 Antes de começar:
 
-1. Abra a aplicação: `http://134.65.230.190/` (ou o túnel `ssh -L 8080:127.0.0.1:80 ubuntu@134.65.230.190` → `http://localhost:8080`).
+1. Abra a aplicação em **https://134-65-230-190.sslip.io/** e entre com o usuário da secretaria.
+   No rodapé, marque **Modo demonstração técnica**: aparecem o botão **Console SQL**, a tela **Arquitetura** e as notas técnicas.
 2. Em outra janela, abra o console SQL na VM: `ssh ubuntu@134.65.230.190` e depois `sudo -u postgres psql -d tp3`.
-3. Deixe o **Console SQL** da aplicação (botão verde no topo) à mão: ele mostra, para cada ação, as 4 etapas
+3. Deixe o **Console SQL** da aplicação (botão escuro à direita do menu) à mão: ele mostra, para cada ação, as 4 etapas
    (front-end → back-end/API → PostgreSQL → retorno) e os comandos SQL exatos.
 
 Para cada item: (1) faça a ação na tela, (2) abra o Console SQL e mostre a rota e o SQL, (3) mostre a resposta na tela,
@@ -12,7 +13,7 @@ Para cada item: (1) faça a ação na tela, (2) abra o Console SQL e mostre a ro
 
 | # | Requisito | Passo a passo na interface | Comprovação no psql |
 |---|---|---|---|
-| 0 | Arquitetura | Tela **Arquitetura & Demo**: front-end, API e instância PostgreSQL (versão, banco, usuário). Mostre `backend/app/db.py`. | consulta 0 (`pg_stat_activity` mostra `gestao-cursos-api`) |
+| 0 | Arquitetura | Tela **Arquitetura**: front-end, API e instância PostgreSQL (versão, banco, usuário). Mostre `backend/app/db.py`. O login (tela inicial) é tratado só pela API. | consulta 0 (`pg_stat_activity` mostra `gestao-cursos-api`) |
 | 1 | Inserção | **Alunos → Novo aluno** (ex.: “Maria Demo”, `maria.demo@aluno.edu.br`, matrícula `PF2026`). Console: `BEGIN`, `INSERT pessoa`, `INSERT aluno`, `COMMIT`. | consulta 1 |
 | 2 | Busca por substring | Na busca de Alunos digite `demo` → `ILIKE '%demo%'`. | consulta 5 (troque o texto) |
 | 3 | Consulta específica | Ícone de olho → ficha do aluno (2 SELECTs, um na VIEW). | `SELECT * FROM pessoa WHERE id_pessoa = …;` |

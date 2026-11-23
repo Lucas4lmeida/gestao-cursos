@@ -23,7 +23,7 @@ from fastapi.staticfiles import StaticFiles
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from . import db  # noqa: E402
+from . import auth, db  # noqa: E402
 from .erros import tratar_erro_postgres, tratar_erro_validacao  # noqa: E402
 from .routers import alunos, cursos, disciplinas, matriculas, professores, relatorios, sistema, turmas  # noqa: E402
 
@@ -74,7 +74,17 @@ async def rastrear_sql(request: Request, call_next):
     return resposta
 
 
-for r in (sistema, alunos, professores, cursos, disciplinas, turmas, matriculas, relatorios):
+@app.middleware("http")
+async def exigir_login(request: Request, call_next):
+    """Toda rota /api/* exige sessão válida, exceto as de autenticação."""
+    caminho = request.url.path
+    if caminho.startswith("/api") and not caminho.startswith("/api/auth/"):
+        if not auth.usuario_da_requisicao(request):
+            return JSONResponse(status_code=401, content={"detail": "Faça login para continuar."})
+    return await call_next(request)
+
+
+for r in (auth, sistema, alunos, professores, cursos, disciplinas, turmas, matriculas, relatorios):
     app.include_router(r.router)
 
 

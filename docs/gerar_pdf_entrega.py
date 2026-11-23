@@ -109,25 +109,25 @@ def gerar(repo: str, url_app: str, saida: Path):
         ["Camada", "Tecnologia", "Detalhes"],
         ["Front-end", "React 18.3 + Vite 5.4 + TypeScript", "Tailwind CSS 3.4 (estilo), React Router 6 (rotas), Recharts (gráficos), "
                                                           "lucide-react (ícones), sonner (notificações)."],
-        ["Back-end/API", "Python 3 + FastAPI 0.115", "Servidor ASGI Uvicorn 0.32; validação de tipos com Pydantic; "
+        ["Back-end/API", "Python 3 + FastAPI 0.115", "Servidor ASGI Uvicorn 0.32; validação de tipos com Pydantic; login com sessão (cookie assinado, senha em hash PBKDF2); "
                                                     "documentação automática OpenAPI em <font name='%s'>/api/docs</font>." % FM],
         ["Acesso ao banco", "psycopg 3.2 + psycopg_pool 3.2", "Driver oficial PostgreSQL para Python (libpq), com pool de conexões."],
         ["SGBD", "PostgreSQL 16.16", "Banco <font name='%s'>tp3</font> do TP3 (8 tabelas, VIEW, índices e gatilhos)." % FM],
         ["Infraestrutura", "Oracle Cloud — Ubuntu 26.04 LTS", "VM <font name='%s'>vm-gestao-cursos</font>; serviço systemd "
-                                                              "<font name='%s'>gestao-cursos</font>." % (FM, FM)],
+                                                              "<font name='%s'>gestao-cursos</font>; Caddy como proxy HTTPS (certificado Let's Encrypt)." % (FM, FM)],
         ["IDE / ferramentas", "Visual Studio Code", "Git, Node.js/npm (build do front-end), psql (console SQL), SSH."],
     ], [3 * cm, 4.6 * cm, W - 7.6 * cm])]
 
     h += [P("3. Arquitetura e identificação das camadas", "h"),
-          P("As três camadas rodam na mesma VM. O navegador só conversa com a API por HTTP; somente a API abre conexões "
-            "com o PostgreSQL, sempre por <font name='%s'>127.0.0.1:5432</font>." % FM),
-          Paragraph("Navegador (React SPA)  --HTTP /api/*-->  FastAPI (Uvicorn, porta 80)  --psycopg 3-->  PostgreSQL 16 (banco tp3)", st["code"]),
+          P("As três camadas rodam na mesma VM. O navegador só conversa com a API por HTTPS (via Caddy); somente a API abre "
+            "conexões com o PostgreSQL, sempre por <font name='%s'>127.0.0.1:5432</font>. Toda rota da API exige login." % FM),
+          Paragraph("Navegador (React)  --HTTPS-->  Caddy :443  -->  FastAPI 127.0.0.1:8000 (/api/*)  --psycopg 3-->  PostgreSQL 16 (tp3)", st["code"]),
           tabela([
               ["Camada", "Onde está no repositório", "Responsabilidade"],
               ["<b>Front-end</b>", "<font name='%s'>frontend/src</font> (páginas em <font name='%s'>pages/</font>); "
                                    "o build fica em <font name='%s'>backend/app/static</font>" % (FM, FM, FM),
                "Telas de Painel, Alunos, Professores, Cursos, Disciplinas, Turmas, Matrículas, Relatórios e "
-               "Arquitetura &amp; Demo; Console SQL com o rastro de cada requisição."],
+               "Arquitetura; tela de login; Console SQL com o rastro de cada requisição (ativado pelo <i>modo demonstração técnica</i>, no rodapé)."],
               ["<b>Back-end/API</b>", "<font name='%s'>backend/app/main.py</font> e <font name='%s'>backend/app/routers/*.py</font>" % (FM, FM),
                "API REST em <font name='%s'>/api/*</font>: CRUD, operações compostas, relatórios; traduz erros do banco "
                "(<font name='%s'>erros.py</font>) e serve o front-end." % (FM, FM)],
@@ -176,7 +176,7 @@ def gerar(repo: str, url_app: str, saida: Path):
         ["Erro de integridade", "Aluno com e-mail repetido; excluir curso com turmas; nota 11",
          "23505 uk_pessoa_email; 23503 fk_turma_curso; 23514 ck_matricula_nota"],
     ], [3.3 * cm, 6.3 * cm, W - 9.6 * cm])]
-    h += [Spacer(1, 4), P("Em todas as ações, o <b>Console SQL</b> da interface mostra as etapas (1) ação no front-end, "
+    h += [Spacer(1, 4), P("Para a demonstração, ative o <b>modo demonstração técnica</b> (rodapé da aplicação). Em todas as ações, o <b>Console SQL</b> da interface mostra as etapas (1) ação no front-end, "
                           "(2) rota da API, (3) comandos SQL executados no PostgreSQL e (4) retorno (status HTTP e tempo). "
                           "A comprovação no banco é feita com <font name='%s'>psql</font> usando "
                           "<font name='%s'>database/06_verificacao_demo.sql</font>." % (FM, FM))]
@@ -193,6 +193,8 @@ def gerar(repo: str, url_app: str, saida: Path):
                "<font name='%s'>trg_protege_truncate</font> e <font name='%s'>trg_id_imutavel</font> (RR06)." % (FM, FM, FM, FM),
                "Proteções físicas que não mudam o modelo: serializam remoções concorrentes de alocações (RT02), "
                "impedem TRUNCATE que ignoraria RT01/RT02 e tornam as chaves substitutas imutáveis."],
+              ["Autenticação na API (login e sessão) com usuários definidos na configuração do servidor; nenhuma tabela nova.",
+               "A aplicação será usada por pessoas reais: os dados pessoais de alunos e professores não podem ficar públicos."],
               ["Script <font name='%s'>06_verificacao_demo.sql</font>." % FM,
                "Consultas para comprovar no console SQL cada operação feita pela aplicação."],
           ], [W * 0.55, W * 0.45])]
@@ -207,7 +209,7 @@ def gerar(repo: str, url_app: str, saida: Path):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default="<i>(preencher com o link do repositório)</i>")
-    ap.add_argument("--url", default="http://134.65.230.190/")
+    ap.add_argument("--url", default="https://134-65-230-190.sslip.io/  (também http://134.65.230.190/)")
     ap.add_argument("--saida", default=str(AQUI / "PF_Entrega_Gestao_de_Cursos.pdf"))
     a = ap.parse_args()
     gerar(a.repo, a.url, Path(a.saida))

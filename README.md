@@ -8,9 +8,11 @@ usando o banco PostgreSQL modelado no TP1, TP2 e TP3.
 ## Arquitetura
 
 ```
- Navegador ──HTTP──▶  Back-end/API (FastAPI)  ──psycopg 3──▶  PostgreSQL 16 (banco tp3)
- React (SPA)          /api/*  + serve o build       pool de conexões      mesma VM, 127.0.0.1:5432
+ Navegador ──HTTPS──▶ Caddy :443 ──▶ Back-end/API (FastAPI) ──psycopg 3──▶ PostgreSQL 16 (banco tp3)
+ React (SPA)          certificado     127.0.0.1:8000, /api/*      pool        mesma VM, 127.0.0.1:5432
 ```
+
+Endereço: **https://134-65-230-190.sslip.io/** (também `http://134.65.230.190/`). O acesso exige login.
 
 | Camada | Tecnologia | Onde está |
 |---|---|---|
@@ -20,8 +22,21 @@ usando o banco PostgreSQL modelado no TP1, TP2 e TP3.
 | SGBD | PostgreSQL 16 | VM Oracle Cloud (Ubuntu), banco `tp3` |
 
 O front-end nunca acessa o banco: toda operação passa por `/api/*`. Cada resposta da API traz o
-cabeçalho `X-SQL-Trace` com os comandos SQL executados (tempo, linhas, erro), mostrados no
-**Console SQL** da interface, o que deixa visível a sequência *front-end → API → PostgreSQL → retorno*.
+cabeçalho `X-SQL-Trace` com os comandos SQL executados (tempo, linhas, erro). Com o **modo demonstração
+técnica** ligado (caixa no rodapé), a interface mostra o **Console SQL** com a sequência
+*front-end → API → PostgreSQL → retorno*, as notas técnicas (restrições, gatilhos) e a tela **Arquitetura**.
+Com o modo desligado, a interface é a de uso normal da secretaria, sem termos técnicos.
+
+## Acesso (login)
+
+Toda rota da API exige sessão. Os usuários ficam em `/etc/gestao-cursos/gestao.env` (`APP_USUARIOS`, senha em
+hash PBKDF2), sem tabelas novas no banco. Na primeira instalação é criado o usuário `secretaria` com senha aleatória:
+
+```bash
+sudo cat /etc/gestao-cursos/credenciais-iniciais.txt            # senha inicial
+sudo bash ~/gestao-cursos/deploy/definir_senha.sh secretaria     # trocar senha (apaga o arquivo acima)
+sudo bash ~/gestao-cursos/deploy/definir_senha.sh professor1     # criar outro usuário
+```
 
 Regras de negócio não são duplicadas na API: PK, UNIQUE, FK, CHECK e os gatilhos RT01/RT02 são do banco.
 A API traduz o erro (SQLSTATE + nome da restrição) em mensagem amigável (`backend/app/erros.py`).
@@ -43,7 +58,7 @@ A API traduz o erro (SQLSTATE + nome da restrição) em mensagem amigável (`bac
 | Gatilho | Turma → remover a última alocação; Nova turma sem alocação | `trg_rt02_*` rejeita no `COMMIT` |
 | Erro de integridade | Novo aluno com e-mail repetido; excluir curso com turmas | `23505`, `23503`, `23514` |
 
-O roteiro completo está na tela **Arquitetura & Demo** e em [`docs/ROTEIRO_DEMONSTRACAO.md`](docs/ROTEIRO_DEMONSTRACAO.md).
+O roteiro completo está na tela **Arquitetura** (visível no modo demonstração) e em [`docs/ROTEIRO_DEMONSTRACAO.md`](docs/ROTEIRO_DEMONSTRACAO.md).
 Consultas de comprovação no console: [`database/06_verificacao_demo.sql`](database/06_verificacao_demo.sql).
 
 ## Banco de dados
@@ -74,11 +89,13 @@ Documentação interativa da API: `http://<host>/api/docs`.
 
 ```bash
 scp -r backend database deploy ubuntu@<IP>:~/gestao-cursos/
-ssh ubuntu@<IP> 'cd ~/gestao-cursos && sudo bash deploy/install.sh'
+ssh ubuntu@<IP> 'cd ~/gestao-cursos && sudo IP_PUBLICO=<IP> bash deploy/install.sh'
 ```
 
-O script instala o ambiente Python, cria (se faltar) o banco `tp3`, aplica `05_ajustes_pf.sql`, gera a senha do
-`gestao_app` em `/etc/gestao-cursos/gestao.env` e sobe o serviço `gestao-cursos` (systemd) na porta 80.
+O script instala o ambiente Python e o Caddy, cria (se faltar) o banco `tp3`, aplica `05_ajustes_pf.sql`, gera a
+senha do `gestao_app` e o usuário inicial em `/etc/gestao-cursos/`, sobe o serviço `gestao-cursos` (systemd, só em
+`127.0.0.1:8000`) e configura o Caddy com HTTPS automático em `<ip-com-hifens>.sslip.io`. Pode ser executado de novo
+para atualizar; senhas e usuários são preservados.
 
 Comandos úteis na VM:
 
@@ -88,5 +105,5 @@ sudo journalctl -u gestao-cursos -f
 sudo -u postgres psql -d tp3 -f /opt/gestao-cursos/database/06_verificacao_demo.sql
 ```
 
-> Oracle Cloud: além do iptables da VM (o script libera a porta), é preciso uma regra de entrada
-> TCP 80 na *Security List* (ou NSG) da VCN, no console da Oracle.
+> Oracle Cloud: além do iptables da VM (o script libera as portas), é preciso liberar TCP 80 e 443 na
+> *Security List* (ou NSG) da VCN, no console da Oracle.

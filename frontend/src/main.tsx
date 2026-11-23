@@ -1,13 +1,17 @@
-import React from "react";
+import { Loader2 } from "lucide-react";
+import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import Layout from "./components/Layout";
 import "./index.css";
+import { api } from "./lib/api";
+import { sessaoStore, useSessao } from "./lib/sessao";
 import Alunos from "./pages/Alunos";
 import Arquitetura from "./pages/Arquitetura";
 import Cursos from "./pages/Cursos";
 import Disciplinas from "./pages/Disciplinas";
+import Login from "./pages/Login";
 import Matriculas from "./pages/Matriculas";
 import Painel from "./pages/Painel";
 import Professores from "./pages/Professores";
@@ -16,6 +20,19 @@ import TurmaDetalhe from "./pages/TurmaDetalhe";
 import Turmas from "./pages/Turmas";
 
 function App() {
+  const sessao = useSessao();
+
+  useEffect(() => {
+    api.get("/api/auth/sessao", { silencioso: true })
+      .then((r) => sessaoStore.set({ status: "autenticado", usuario: r.usuario }))
+      .catch(() => sessaoStore.set({ status: "anonimo" }));
+  }, []);
+
+  if (sessao.status === "verificando") {
+    return <div className="flex min-h-screen items-center justify-center text-brand-800"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  }
+  if (sessao.status === "anonimo") return <Login />;
+
   return (
     <Layout>
       <Routes>
@@ -39,7 +56,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <App />
-      <Toaster richColors position="top-right" closeButton />
+      <Toaster richColors position="top-right" closeButton toastOptions={{ style: { fontFamily: "'Source Sans 3', sans-serif", fontSize: 14 } }} />
     </BrowserRouter>
   </React.StrictMode>,
 );

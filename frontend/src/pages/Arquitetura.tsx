@@ -56,7 +56,7 @@ export default function Arquitetura() {
         <div className="space-y-6">
           <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
             <Camada icone={MonitorSmartphone} cor="bg-gradient-to-br from-sky-500 to-indigo-500" titulo="Front-end" subtitulo="Interface no navegador"
-              itens={[["Tecnologia", "React 18 + Vite"], ["Estilo", "Tailwind CSS"], ["Código", "frontend/src"], ["Acesso ao banco", "nenhum (só HTTP /api)"]]} />
+              itens={[["Tecnologia", "React 18 + Vite"], ["Estilo", "Tailwind CSS"], ["Código", "frontend/src"], ["Acesso ao banco", "nenhum (só HTTPS /api)"]]} />
             <div className="flex justify-center text-slate-400"><ArrowRight className="hidden h-6 w-6 lg:block" /><ArrowDown className="h-6 w-6 lg:hidden" /></div>
             <Camada icone={Server} cor="bg-gradient-to-br from-violet-500 to-fuchsia-500" titulo="Back-end / API" subtitulo="REST em /api/*"
               itens={[["Framework", dados.backend.framework], ["Driver", dados.backend.driver], ["Python", dados.backend.python], ["Servidor", dados.backend.servidor]]} />
@@ -68,7 +68,7 @@ export default function Arquitetura() {
           <div className="grid gap-6 lg:grid-cols-3">
             <Cartao className="p-5 lg:col-span-2">
               <h3 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white"><CheckCircle2 className="h-4 w-4 text-emerald-500" />Roteiro: funcionalidades mínimas exigidas</h3>
-              <p className="mt-1 text-xs text-slate-500">Em cada ação, abra o <b>Console SQL</b> (canto superior direito) para mostrar as etapas: front-end → API → SQL no PostgreSQL → retorno.</p>
+              <p className="mt-1 text-xs text-slate-500">Em cada ação, abra o <b>Console SQL</b> (à direita do menu) para mostrar as etapas: front-end → API → SQL no PostgreSQL → retorno.</p>
               <ol className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
                 {ROTEIRO.map((r, i) => (
                   <li key={r.req} className="flex items-start gap-3 py-2.5">

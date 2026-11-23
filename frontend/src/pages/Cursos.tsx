@@ -37,10 +37,10 @@ function FormCurso({ inicial, id, fechar, aoSalvar }: { inicial: any; id?: numbe
     <Modal aberto fechar={fechar} titulo={id ? "Editar curso" : "Novo curso"} largura="max-w-2xl"
       rodape={<><Botao variante="secundario" onClick={fechar}>Cancelar</Botao><Botao type="submit" form="form-curso" carregando={salvando}>Salvar</Botao></>}>
       <form id="form-curso" onSubmit={salvar} className="grid gap-4 sm:grid-cols-2">
-        <Campo rotulo="Nome do curso" obrigatorio className="sm:col-span-2" dica="Único (uk_curso_nome)"><Entrada value={f.nome} onChange={set("nome")} required /></Campo>
-        <Campo rotulo="Carga horária total (h)" obrigatorio dica="CHECK carga_horaria > 0"><Entrada type="number" value={f.carga_horaria} onChange={set("carga_horaria")} required /></Campo>
+        <Campo rotulo="Nome do curso" obrigatorio className="sm:col-span-2" dicaTecnica="uk_curso_nome"><Entrada value={f.nome} onChange={set("nome")} required /></Campo>
+        <Campo rotulo="Carga horária total (horas)" obrigatorio dicaTecnica="ck_curso_carga: carga_horaria > 0"><Entrada type="number" value={f.carga_horaria} onChange={set("carga_horaria")} required /></Campo>
         <Campo rotulo="Categoria"><Entrada value={f.categoria ?? ""} onChange={set("categoria")} placeholder="Tecnologia, Saúde…" /></Campo>
-        <Campo rotulo="Professor coordenador" obrigatorio className="sm:col-span-2" dica="Um professor coordena no máximo um curso (uk_curso_coordenador). Professores que já coordenam aparecem marcados.">
+        <Campo rotulo="Professor coordenador" obrigatorio className="sm:col-span-2" dica="Cada professor pode coordenar apenas um curso." dicaTecnica="uk_curso_coordenador (1:1 Coordena)">
           <Selecao value={f.id_professor_coordenador} onChange={set("id_professor_coordenador")} required>
             <option value="">Selecione…</option>
             {op?.professores.map((p: any) => (
@@ -61,7 +61,7 @@ function DetalheCurso({ id, fechar }: { id: number; fechar: () => void }) {
       {carregando || !c ? <Carregando /> : (
         <div className="space-y-6 p-5">
           <div>
-            <div className="text-xl font-semibold text-slate-900 dark:text-white">{c.nome}</div>
+            <div className="font-serif text-2xl font-semibold text-brand-900">{c.nome}</div>
             <div className="mt-2 flex flex-wrap gap-2"><SeloAtivo ativo={c.ativo} />{c.categoria && <Selo cor="azul">{c.categoria}</Selo>}<Selo>{c.carga_horaria} h</Selo></div>
             {c.descricao && <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{c.descricao}</p>}
           </div>
@@ -104,7 +104,7 @@ export default function Cursos() {
 
   return (
     <div>
-      <Cabecalho icone={<GraduationCap className="h-5 w-5" />} titulo="Cursos" subtitulo="Cada curso tem exatamente um professor coordenador (relacionamento 1:1)."
+      <Cabecalho icone={<GraduationCap className="h-5 w-5" />} titulo="Cursos" subtitulo="Cursos oferecidos pela instituição, com coordenação, carga horária e turmas."
         acoes={<Botao icone={<Plus className="h-4 w-4" />} onClick={() => setForm({ inicial: vazio })}>Novo curso</Botao>} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Busca valor={busca} onChange={setBusca} placeholder="Buscar por nome, categoria ou descrição" />
@@ -117,10 +117,10 @@ export default function Cursos() {
           {dados?.map((c) => (
             <Cartao key={c.id_curso} className={`flex flex-col p-5 transition hover:shadow-lg ${!c.ativo ? "opacity-70" : ""}`}>
               <div className="flex items-start justify-between gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white"><GraduationCap className="h-5 w-5" /></div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-brand-50 text-brand-800"><GraduationCap className="h-5 w-5" /></div>
                 <div className="flex gap-2">{c.categoria && <Selo cor="azul">{c.categoria}</Selo>}<SeloAtivo ativo={c.ativo} /></div>
               </div>
-              <button onClick={() => setVer(c.id_curso)} className="mt-4 text-left text-base font-semibold text-slate-900 hover:text-brand-600 dark:text-white">{c.nome}</button>
+              <button onClick={() => setVer(c.id_curso)} className="mt-4 text-left font-serif text-lg font-semibold leading-snug text-brand-900 hover:underline">{c.nome}</button>
               <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-slate-500">{c.descricao ?? "Sem descrição."}</p>
               <div className="mt-3 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"><Crown className="h-3.5 w-3.5 text-amber-500" />{c.coordenador}</div>
               <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 text-center dark:border-slate-800">

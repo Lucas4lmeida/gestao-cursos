@@ -51,7 +51,7 @@ MENSAGENS: dict[str, str] = {
     "fk_matricula_aluno": "Aluno inexistente.",
     "fk_matricula_turma": "Turma inexistente.",
     # alocacao
-    "pk_alocacao": "Este professor já está alocado nesta disciplina para esta turma.",
+    "pk_alocacao": "Este professor já leciona esta disciplina nesta turma.",
     "ck_alocacao_carga_semanal": "A carga horária semanal deve estar entre 1 e 60 horas.",
     "fk_alocacao_professor": "Professor inexistente.",
     "fk_alocacao_disciplina": "Disciplina inexistente.",
@@ -60,13 +60,13 @@ MENSAGENS: dict[str, str] = {
 
 # Mensagens para FK violada ao EXCLUIR o registro referenciado (ON DELETE RESTRICT).
 MENSAGENS_RESTRICT: dict[str, str] = {
-    "fk_matricula_aluno": "O aluno possui matrículas e não pode ser excluído. Use a inativação (exclusão lógica).",
-    "fk_matricula_turma": "A turma possui matrículas e não pode ser excluída. Use a inativação (exclusão lógica).",
-    "fk_turma_curso": "O curso possui turmas vinculadas e não pode ser excluído. Use a inativação (exclusão lógica).",
-    "fk_curso_coordenador": "O professor coordena um curso e não pode ser excluído. Troque o coordenador antes.",
-    "fk_alocacao_professor": "O professor possui alocações e não pode ser excluído. Use a inativação (exclusão lógica).",
-    "fk_alocacao_disciplina": "A disciplina está alocada em turmas e não pode ser excluída. Use a inativação (exclusão lógica).",
-    "fk_alocacao_turma": "A turma possui alocações vinculadas.",
+    "fk_matricula_aluno": "O aluno possui matrículas e não pode ser excluído. Para manter o histórico, use a opção Inativar.",
+    "fk_matricula_turma": "A turma possui matrículas e não pode ser excluída. Para manter o histórico, use a opção Inativar.",
+    "fk_turma_curso": "O curso possui turmas vinculadas e não pode ser excluído. Para manter o histórico, use a opção Inativar.",
+    "fk_curso_coordenador": "O professor coordena um curso e não pode ser excluído. Defina outro coordenador antes.",
+    "fk_alocacao_professor": "O professor possui alocações e não pode ser excluído. Para manter o histórico, use a opção Inativar.",
+    "fk_alocacao_disciplina": "A disciplina está alocada em turmas e não pode ser excluída. Para manter o histórico, use a opção Inativar.",
+    "fk_alocacao_turma": "A turma possui professores alocados.",
 }
 
 TIPOS = {
@@ -103,13 +103,13 @@ async def tratar_erro_postgres(request: Request, exc: psycopg.Error) -> JSONResp
         })
 
     if msg.startswith("RT02"):
-        amigavel = ("Gatilho RT02 bloqueou a operação: toda turma precisa ter pelo menos uma alocação "
-                    "(professor + disciplina). Nada foi gravado.")
+        amigavel = ("Não foi possível concluir: toda turma precisa ter pelo menos um professor alocado. "
+                    "Nenhuma alteração foi gravada.")
     elif msg.startswith("RT01"):
-        amigavel = ("Gatilho RT01 bloqueou a operação: toda pessoa precisa ter exatamente um registro "
-                    "em aluno ou professor.")
+        amigavel = ("Não foi possível concluir: todo cadastro de pessoa precisa ser de um aluno ou de um professor. "
+                    "Nenhuma alteração foi gravada.")
     elif msg.startswith("RR06"):
-        amigavel = "Gatilho RR06: identificadores são imutáveis."
+        amigavel = "O código interno de um registro não pode ser alterado."
     elif sqlstate == "23503" and request.method == "DELETE" and constraint in MENSAGENS_RESTRICT:
         amigavel = MENSAGENS_RESTRICT[constraint]
     elif constraint and constraint in MENSAGENS:
@@ -149,8 +149,8 @@ async def tratar_erro_validacao(request: Request, exc: RequestValidationError) -
     campos = []
     for e in exc.errors():
         loc = [str(p) for p in e.get("loc", []) if p not in ("body",)]
-        campos.append(".".join(loc) or "?")
+        campos.append(" ".join(loc).replace("_", " ") or "?")
     return JSONResponse(status_code=422, content={
-        "detail": "Dados em formato inválido para a API: " + ", ".join(dict.fromkeys(campos)) + ".",
+        "detail": "Verifique os campos preenchidos: " + ", ".join(dict.fromkeys(campos)) + ".",
         "api": {"origem": "validação de tipos da API (antes do banco)", "erros": exc.errors()},
     }, )

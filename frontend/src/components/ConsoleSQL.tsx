@@ -135,16 +135,17 @@ export default function ConsoleSQL() {
       aberto={aberto}
       fechar={consoleSQL.fechar}
       largura="max-w-2xl"
+      escura
       titulo={
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-emerald-400 dark:bg-slate-800"><Zap className="h-4 w-4" /></div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800 text-emerald-400"><Zap className="h-4 w-4" /></div>
           <div>
-            <div className="text-sm">Console SQL da API</div>
-            <div className="text-[11px] font-normal text-slate-500">Comandos que o back-end executou no PostgreSQL, em ordem</div>
+            <div className="font-sans text-sm">Console SQL da API</div>
+            <div className="font-sans text-[11px] font-normal text-slate-400">Comandos que o back-end executou no PostgreSQL, em ordem</div>
           </div>
         </div>
       }
-      acoes={<BotaoIcone titulo="Limpar histórico" onClick={() => traceStore.limpar()}><Trash2 className="h-4 w-4" /></BotaoIcone>}
+      acoes={<BotaoIcone titulo="Limpar histórico" onClick={() => traceStore.limpar()} className="text-slate-400 hover:bg-slate-800 hover:text-white"><Trash2 className="h-4 w-4" /></BotaoIcone>}
     >
       <div className="min-h-full space-y-2 bg-slate-950 p-4">
         {rastros.length === 0 && <p className="py-10 text-center text-sm text-slate-500">Nenhuma requisição registrada ainda. Use a aplicação e volte aqui.</p>}

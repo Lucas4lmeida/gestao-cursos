@@ -59,3 +59,8 @@ export function realcarSQL(sql: string) {
     )
     .join("");
 }
+
+/** Mantém só os dígitos (ex.: "(11) 98765-4321" -> "11987654321"); vazio vira "". */
+export function soDigitos(v?: string | null) {
+  return (v ?? "").replace(/\D/g, "");
+}

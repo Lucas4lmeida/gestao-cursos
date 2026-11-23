@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ApiError, api, consoleSQL } from "./api";
+import { demoStore } from "./sessao";
 
 /** Carrega dados de uma URL da API e permite recarregar. */
 export function useApi<T = any>(url: string | null, acao?: string) {
@@ -44,7 +45,11 @@ export function useDebounce<T>(valor: T, ms = 300) {
 
 /** Exibe o erro vindo do banco (via API) em um toast com SQLSTATE e restrição. */
 export function notificarErro(e: unknown) {
-  if (e instanceof ApiError) {
+  const demo = demoStore.get();
+  if (e instanceof ApiError && e.status === 401) return; // a tela de login já informa
+  if (e instanceof ApiError && !demo) {
+    toast.error(e.message, { duration: 7000 });
+  } else if (e instanceof ApiError) {
     const pg = e.pg;
     const partes = [
       pg?.sqlstate && `SQLSTATE ${pg.sqlstate}`,
@@ -61,9 +66,14 @@ export function notificarErro(e: unknown) {
   }
 }
 
-export function notificarSucesso(msg: string, descricao?: string) {
+/** `tecnico` só aparece no modo demonstração (ex.: quais comandos SQL foram executados). */
+export function notificarSucesso(msg: string, tecnico?: string) {
+  if (!demoStore.get()) {
+    toast.success(msg);
+    return;
+  }
   toast.success(msg, {
-    description: descricao,
+    description: tecnico,
     action: { label: "Ver SQL", onClick: () => consoleSQL.abrir() },
   });
 }

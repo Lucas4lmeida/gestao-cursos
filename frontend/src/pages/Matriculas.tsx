@@ -1,6 +1,6 @@
 import { ClipboardList, Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Avatar, Botao, BotaoIcone, Busca, Cabecalho, Campo, Cartao, Carregando, Confirmar, Entrada, ErroCarga, Modal,
   NotaSQL, Selecao, SeloStatus, Tabela, Td, Th, Vazio,
@@ -20,7 +20,7 @@ function NovaMatricula({ fechar, aoSalvar }: { fechar: () => void; aoSalvar: () 
     setSalvando(true);
     try {
       const r = await api.post("/api/matriculas", { id_aluno: Number(f.id_aluno), id_turma: Number(f.id_turma), data_matricula: f.data_matricula }, { acao: "Registrar matrícula" });
-      notificarSucesso("Matrícula registrada", `Status inicial definido pelo banco: '${r.status}' (DEFAULT).`);
+      notificarSucesso(`Matrícula registrada (situação: ${r.status})`, "Status inicial aplicado pelo DEFAULT do PostgreSQL (RO03)");
       aoSalvar();
       fechar();
     } catch (err) { notificarErro(err); } finally { setSalvando(false); }
@@ -66,7 +66,7 @@ function EditarMatricula({ m, fechar, aoSalvar }: { m: any; fechar: () => void; 
       rodape={<><Botao variante="secundario" onClick={fechar}>Cancelar</Botao><Botao type="submit" form="form-em" carregando={salvando}>Salvar</Botao></>}>
       <form id="form-em" onSubmit={salvar} className="grid gap-4 sm:grid-cols-2">
         <Campo rotulo="Status"><Selecao value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>{STATUS.map((s) => <option key={s}>{s}</option>)}</Selecao></Campo>
-        <Campo rotulo="Nota final" dica="CHECK entre 0 e 10"><Entrada value={f.nota_final} inputMode="decimal" onChange={(e) => setF({ ...f, nota_final: e.target.value })} /></Campo>
+        <Campo rotulo="Nota final" dica="De 0 a 10" dicaTecnica="ck_matricula_nota"><Entrada value={f.nota_final} inputMode="decimal" onChange={(e) => setF({ ...f, nota_final: e.target.value })} /></Campo>
       </form>
     </Modal>
   );
@@ -78,6 +78,10 @@ export default function Matriculas() {
   const q = useDebounce(busca);
   const { dados, carregando, erro, recarregar } = useApi<any[]>(`/api/matriculas${qs({ q, status })}`, q ? `Buscar matrículas por "${q}"` : "Listar matrículas");
   const [nova, setNova] = useState(false);
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get("nova")) { setNova(true); setParams({}, { replace: true }); }
+  }, [params, setParams]);
   const [editar, setEditar] = useState<any>(null);
   const [excluir, setExcluir] = useState<any>(null);
   const [excluindo, setExcluindo] = useState(false);
@@ -93,7 +97,7 @@ export default function Matriculas() {
 
   return (
     <div>
-      <Cabecalho icone={<ClipboardList className="h-5 w-5" />} titulo="Matrículas" subtitulo="Relacionamento N:N entre aluno e turma, consultado pela VIEW vw_historico_matricula."
+      <Cabecalho icone={<ClipboardList className="h-5 w-5" />} titulo="Matrículas" subtitulo="Vínculo dos alunos às turmas, com situação acadêmica e nota final."
         acoes={<Botao icone={<Plus className="h-4 w-4" />} onClick={() => setNova(true)}>Nova matrícula</Botao>} />
       <Cartao>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
@@ -111,16 +115,16 @@ export default function Matriculas() {
             <tbody>
               {dados?.map((m) => (
                 <tr key={`${m.id_aluno}-${m.id_turma}`} className="transition hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
-                  <Td><div className="flex items-center gap-2"><Avatar nome={m.nome_aluno} tamanho="sm" /><div><div className="font-medium text-slate-900 dark:text-white">{m.nome_aluno}</div><div className="font-mono text-[11px] text-slate-400">{m.numero_matricula}</div></div></div></Td>
-                  <Td><Link to={`/turmas/${m.id_turma}`} className="font-mono text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">{m.codigo_turma}/{m.ano_letivo}</Link></Td>
+                  <Td><div className="flex items-center gap-2"><Avatar nome={m.nome_aluno} tamanho="sm" /><div><div className="whitespace-nowrap font-medium text-slate-900">{m.nome_aluno}</div><div className="font-mono text-[11px] text-slate-400">{m.numero_matricula}</div></div></div></Td>
+                  <Td className="whitespace-nowrap"><Link to={`/turmas/${m.id_turma}`} className="font-mono text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">{m.codigo_turma}/{m.ano_letivo}</Link></Td>
                   <Td className="hidden max-w-[220px] truncate lg:table-cell">{m.curso}</Td>
                   <Td className="hidden md:table-cell">{data(m.data_matricula)}</Td>
                   <Td className="font-semibold">{nota(m.nota_final)}</Td>
                   <Td><SeloStatus status={m.status} /></Td>
                   <Td>
                     <div className="flex justify-end gap-0.5">
-                      <BotaoIcone titulo="Atualizar status/nota (UPDATE)" onClick={() => setEditar(m)}><Pencil className="h-4 w-4" /></BotaoIcone>
-                      <BotaoIcone titulo="Excluir (DELETE)" onClick={() => setExcluir(m)} className="hover:!text-rose-600"><Trash2 className="h-4 w-4" /></BotaoIcone>
+                      <BotaoIcone titulo="Alterar situação ou nota" onClick={() => setEditar(m)}><Pencil className="h-4 w-4" /></BotaoIcone>
+                      <BotaoIcone titulo="Excluir matrícula" onClick={() => setExcluir(m)} className="hover:!text-rose-600"><Trash2 className="h-4 w-4" /></BotaoIcone>
                     </div>
                   </Td>
                 </tr>

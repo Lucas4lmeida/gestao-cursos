@@ -35,8 +35,8 @@ function FormDisciplina({ inicial, id, fechar, aoSalvar }: { inicial: any; id?: 
     <Modal aberto fechar={fechar} titulo={id ? "Editar disciplina" : "Nova disciplina"} largura="max-w-2xl"
       rodape={<><Botao variante="secundario" onClick={fechar}>Cancelar</Botao><Botao type="submit" form="form-disc" carregando={salvando}>Salvar</Botao></>}>
       <form id="form-disc" onSubmit={salvar} className="grid gap-4 sm:grid-cols-3">
-        <Campo rotulo="Nome" obrigatorio className="sm:col-span-2" dica="Único (uk_disciplina_nome)"><Entrada value={f.nome} onChange={set("nome")} required /></Campo>
-        <Campo rotulo="Carga horária (h)" obrigatorio dica="CHECK > 0"><Entrada type="number" value={f.carga_horaria} onChange={set("carga_horaria")} required /></Campo>
+        <Campo rotulo="Nome" obrigatorio className="sm:col-span-2" dicaTecnica="uk_disciplina_nome"><Entrada value={f.nome} onChange={set("nome")} required /></Campo>
+        <Campo rotulo="Carga horária (horas)" obrigatorio dicaTecnica="ck_disciplina_carga: > 0"><Entrada type="number" value={f.carga_horaria} onChange={set("carga_horaria")} required /></Campo>
         <Campo rotulo="Ementa" className="sm:col-span-3"><AreaTexto value={f.ementa ?? ""} onChange={set("ementa")} /></Campo>
         <Campo rotulo="Bibliografia" className="sm:col-span-3"><AreaTexto value={f.bibliografia ?? ""} onChange={set("bibliografia")} /></Campo>
       </form>
@@ -51,7 +51,7 @@ function DetalheDisciplina({ id, fechar }: { id: number; fechar: () => void }) {
       {carregando || !d ? <Carregando /> : (
         <div className="space-y-6 p-5">
           <div>
-            <div className="text-xl font-semibold text-slate-900 dark:text-white">{d.nome}</div>
+            <div className="font-serif text-2xl font-semibold text-brand-900">{d.nome}</div>
             <div className="mt-2 flex gap-2"><SeloAtivo ativo={d.ativo} /><Selo>{d.carga_horaria} h</Selo></div>
           </div>
           <dl className="space-y-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
@@ -91,7 +91,7 @@ export default function Disciplinas() {
 
   return (
     <div>
-      <Cabecalho icone={<BookOpen className="h-5 w-5" />} titulo="Disciplinas" subtitulo="Componentes curriculares alocados a professores e turmas."
+      <Cabecalho icone={<BookOpen className="h-5 w-5" />} titulo="Disciplinas" subtitulo="Componentes curriculares, ementas e bibliografia."
         acoes={<Botao icone={<Plus className="h-4 w-4" />} onClick={() => setForm({ inicial: vazio })}>Nova disciplina</Botao>} />
       <Cartao>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">

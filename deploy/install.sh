@@ -6,7 +6,7 @@
 #
 # Uso (na raiz do projeto, dentro da VM):
 #   sudo bash deploy/install.sh
-# Variáveis opcionais: DB_NAME (padrão tp3), PORT (padrão 80)
+# Variáveis opcionais: DB_NAME (padrão tp3), DOMINIO (padrão <ip-com-hifens>.sslip.io)
 # =============================================================================
 set -euo pipefail
 
@@ -14,17 +14,20 @@ APP_DIR=/opt/gestao-cursos
 ENV_DIR=/etc/gestao-cursos
 ENV_FILE=$ENV_DIR/gestao.env
 DB_NAME=${DB_NAME:-tp3}
-PORT=${PORT:-80}
+IP_PUBLICO=${IP_PUBLICO:-}
+DOMINIO=${DOMINIO:-${IP_PUBLICO//./-}.sslip.io}
 SRC=$(cd "$(dirname "$0")/.." && pwd)
 
 [ "$(id -u)" -eq 0 ] || { echo "Execute com sudo."; exit 1; }
-echo "==> Origem: $SRC  |  Banco: $DB_NAME  |  Porta: $PORT"
+[ -n "$IP_PUBLICO" ] || { echo "Não identifiquei o IP público. Rode com: sudo IP_PUBLICO=x.x.x.x bash deploy/install.sh"; exit 1; }
+echo "==> Origem: $SRC  |  Banco: $DB_NAME  |  Domínio HTTPS: $DOMINIO"
 
 # 1. Dependências do sistema ---------------------------------------------------
 if ! python3 -c "import ensurepip" 2>/dev/null; then
   echo "==> Instalando python3-venv"
   apt-get update -qq && apt-get install -y -qq python3-venv
 fi
+command -v caddy >/dev/null || { echo "==> Instalando Caddy (proxy HTTPS)"; apt-get install -y -qq caddy; }
 command -v psql >/dev/null || { echo "PostgreSQL não encontrado nesta VM."; exit 1; }
 
 # 2. Usuário de sistema e arquivos da aplicação --------------------------------
@@ -53,42 +56,59 @@ if ! runuser -u postgres -- psql -Atc "SELECT 1 FROM pg_database WHERE datname='
 fi
 
 install -d -m 750 -o root -g gestao "$ENV_DIR"
-if [ -f "$ENV_FILE" ]; then
-  APP_PW=$(grep '^DB_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)
-else
-  APP_PW=$(openssl rand -hex 24)
+ler_env() { [ -f "$ENV_FILE" ] && grep "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- || true; }
+APP_PW=$(ler_env DB_PASSWORD);            [ -n "$APP_PW" ] || APP_PW=$(openssl rand -hex 24)
+SESSION_SECRET=$(ler_env SESSION_SECRET); [ -n "$SESSION_SECRET" ] || SESSION_SECRET=$(openssl rand -hex 32)
+APP_USUARIOS=$(ler_env APP_USUARIOS)
+if [ -z "$APP_USUARIOS" ]; then
+  # Primeiro acesso: usuário "secretaria" com senha aleatória, legível só pelo root.
+  SENHA_INICIAL=$(openssl rand -base64 12 | tr -d '/+=' | cut -c1-14)
+  HASH=$(cd "$APP_DIR/backend" && "$APP_DIR/venv/bin/python" -c "import sys; from app.auth import gerar_hash; print(gerar_hash(sys.argv[1]))" "$SENHA_INICIAL")
+  APP_USUARIOS="secretaria:$HASH"
+  install -m 600 /dev/null "$ENV_DIR/credenciais-iniciais.txt"
+  printf 'Usuário: secretaria\nSenha:   %s\n(troque com: sudo bash deploy/definir_senha.sh secretaria)\n' "$SENHA_INICIAL" > "$ENV_DIR/credenciais-iniciais.txt"
+  echo "==> Usuário inicial criado. Veja com: sudo cat $ENV_DIR/credenciais-iniciais.txt"
 fi
-cat > "$ENV_FILE" <<EOF
+cat > "$ENV_FILE" <<FIM
 # Gerado por deploy/install.sh
 DB_PASSWORD=$APP_PW
 DATABASE_URL=postgresql://gestao_app:$APP_PW@127.0.0.1:5432/$DB_NAME
 DB_POOL_MAX=5
-EOF
+SESSION_SECRET=$SESSION_SECRET
+APP_USUARIOS=$APP_USUARIOS
+FIM
 chown root:gestao "$ENV_FILE"; chmod 640 "$ENV_FILE"
 
 echo "==> Ajustes do PF (role gestao_app com privilégio mínimo)"
 (cd /tmp && $PSQL -d "$DB_NAME" -v app_password="$APP_PW" -f "$APP_DIR/database/05_ajustes_pf.sql" >/dev/null)
 
-# 4. Serviço systemd ------------------------------------------------------------
-sed "s/__PORT__/$PORT/g" "$SRC/deploy/gestao-cursos.service" > /etc/systemd/system/gestao-cursos.service
+# 4. Serviço systemd da API (somente 127.0.0.1:8000) --------------------------
+cp "$SRC/deploy/gestao-cursos.service" /etc/systemd/system/gestao-cursos.service
 systemctl daemon-reload
 systemctl enable -q gestao-cursos
 systemctl restart gestao-cursos
 
-# 5. Firewall local (as imagens Oracle bloqueiam portas além da 22) -------------
-if command -v iptables >/dev/null && ! iptables -C INPUT -p tcp --dport "$PORT" -m conntrack --ctstate NEW -j ACCEPT 2>/dev/null; then
-  echo "==> Liberando a porta $PORT no iptables"
-  iptables -I INPUT -p tcp --dport "$PORT" -m conntrack --ctstate NEW -j ACCEPT
-  command -v netfilter-persistent >/dev/null && netfilter-persistent save >/dev/null 2>&1 || true
-fi
+# 5. Caddy (HTTP na porta 80 e HTTPS na 443) e firewall local ------------------
+sed "s/__DOMINIO__/$DOMINIO/g" "$SRC/deploy/Caddyfile" > /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
+systemctl enable -q caddy
+systemctl reload caddy 2>/dev/null || systemctl restart caddy
+for P in 80 443; do
+  if ! iptables -C INPUT -p tcp --dport "$P" -m conntrack --ctstate NEW -j ACCEPT 2>/dev/null; then
+    echo "==> Liberando a porta $P no iptables"
+    iptables -I INPUT -p tcp --dport "$P" -m conntrack --ctstate NEW -j ACCEPT
+  fi
+done
+command -v netfilter-persistent >/dev/null && netfilter-persistent save >/dev/null 2>&1 || true
 
 # 6. Verificação ------------------------------------------------------------------
 for i in $(seq 1 20); do
-  curl -fs "http://127.0.0.1:$PORT/api/saude" >/dev/null && break
+  [[ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/auth/sessao)" =~ ^(200|401)$ ]] && break
   sleep 1
 done
-if curl -fs "http://127.0.0.1:$PORT/api/saude" >/dev/null; then
-  echo "==> OK: aplicação no ar em http://<IP-da-VM>:$PORT"
+# A API responde 401 sem login: isso indica que está no ar (502 seria o Caddy sem a API).
+if [[ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/api/auth/sessao)" =~ ^(200|401)$ ]]; then
+  echo "==> OK: http://$IP_PUBLICO/  e  https://$DOMINIO/"
 else
   echo "Falha ao iniciar. Veja: journalctl -u gestao-cursos -n 50"; exit 1
 fi

@@ -7,7 +7,7 @@ import {
   Gaveta, Info, Modal, Selecao, Selo, SeloAtivo, Tabela, Td, Th, Vazio,
 } from "../components/ui";
 import { api, qs } from "../lib/api";
-import { data, hoje } from "../lib/format";
+import { data, hoje, soDigitos } from "../lib/format";
 import { notificarErro, notificarSucesso, useApi, useDebounce } from "../lib/hooks";
 
 export const TITULACOES = ["Graduado", "Especialista", "Mestre", "Doutor", "Pós-Doutor"];
@@ -20,11 +20,11 @@ function FormProfessor({ inicial, id, fechar, aoSalvar }: { inicial: any; id?: n
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
     setSalvando(true);
-    const corpo = { ...f, data_nascimento: f.data_nascimento || null };
+    const corpo = { ...f, data_nascimento: f.data_nascimento || null, telefone: soDigitos(f.telefone) };
     try {
       if (id) await api.put(`/api/professores/${id}`, corpo, { acao: `Editar professor ${f.nome}` });
       else await api.post("/api/professores", corpo, { acao: `Cadastrar professor ${f.nome}` });
-      notificarSucesso(id ? "Professor atualizado" : "Professor cadastrado", "pessoa + professor gravados na mesma transação");
+      notificarSucesso(id ? "Professor atualizado" : "Professor cadastrado", "INSERT/UPDATE em pessoa + professor na mesma transação");
       aoSalvar();
       fechar();
     } catch (err) {
@@ -38,9 +38,9 @@ function FormProfessor({ inicial, id, fechar, aoSalvar }: { inicial: any; id?: n
       rodape={<><Botao variante="secundario" onClick={fechar}>Cancelar</Botao><Botao type="submit" form="form-prof" carregando={salvando}>Salvar</Botao></>}>
       <form id="form-prof" onSubmit={salvar} className="grid gap-4 sm:grid-cols-2">
         <Campo rotulo="Nome completo" obrigatorio className="sm:col-span-2"><Entrada value={f.nome} onChange={set("nome")} required /></Campo>
-        <Campo rotulo="E-mail" obrigatorio><Entrada value={f.email} onChange={set("email")} required /></Campo>
-        <Campo rotulo="Telefone" dica="Somente dígitos, com DDD"><Entrada value={f.telefone ?? ""} onChange={set("telefone")} /></Campo>
-        <Campo rotulo="Titulação" obrigatorio dica="Domínio do CHECK ck_professor_titulacao">
+        <Campo rotulo="E-mail" obrigatorio dicaTecnica="uk_pessoa_email · ck_pessoa_email"><Entrada inputMode="email" autoComplete="off" value={f.email} onChange={set("email")} required /></Campo>
+        <Campo rotulo="Telefone" dica="Com DDD"><Entrada type="tel" value={f.telefone ?? ""} onChange={set("telefone")} placeholder="(11) 98765-4321" /></Campo>
+        <Campo rotulo="Titulação" obrigatorio dicaTecnica="ck_professor_titulacao">
           <Selecao value={f.titulacao} onChange={set("titulacao")}>{TITULACOES.map((t) => <option key={t}>{t}</option>)}</Selecao>
         </Campo>
         <Campo rotulo="Data de contratação" obrigatorio><Entrada type="date" value={f.data_contratacao ?? ""} onChange={set("data_contratacao")} required /></Campo>
@@ -75,7 +75,7 @@ function DetalheProfessor({ id, fechar, editar }: { id: number; fechar: () => vo
             <div className="col-span-2"><Info rotulo="Currículo">{p.curriculo}</Info></div>
           </dl>
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Alocações (professor × disciplina × turma)</h3>
+            <h3 className="mb-2 font-serif text-base font-semibold text-brand-900">Disciplinas e turmas que leciona</h3>
             {p.alocacoes.length === 0 ? <p className="text-sm text-slate-500">Sem alocações.</p> : (
               <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
                 {p.alocacoes.map((a: any, i: number) => (
@@ -113,7 +113,7 @@ export default function Professores() {
 
   return (
     <div>
-      <Cabecalho icone={<UserSquare2 className="h-5 w-5" />} titulo="Professores" subtitulo="Especialização de pessoa; um professor coordena no máximo um curso."
+      <Cabecalho icone={<UserSquare2 className="h-5 w-5" />} titulo="Professores" subtitulo="Corpo docente, titulação, coordenação de cursos e carga horária semanal."
         acoes={<Botao icone={<Plus className="h-4 w-4" />} onClick={() => setForm({ inicial: vazio })}>Novo professor</Botao>} />
       <Cartao>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">

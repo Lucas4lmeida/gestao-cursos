@@ -1,0 +1,22 @@
+# Proxy reverso na frente da API (gerado por deploy/install.sh).
+# - __DOMINIO__: HTTPS automático (certificado Let's Encrypt renovado pelo Caddy).
+# - :80        : acesso direto pelo IP em HTTP (usado também pela validação do certificado).
+
+(comum) {
+	encode gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options SAMEORIGIN
+		-Server
+	}
+	reverse_proxy 127.0.0.1:8000
+}
+
+__DOMINIO__ {
+	import comum
+}
+
+:80 {
+	import comum
+}
