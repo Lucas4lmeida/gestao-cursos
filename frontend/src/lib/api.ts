@@ -1,7 +1,7 @@
 // Cliente HTTP do front-end. Toda operação passa pela API (/api/*);
 // o front-end nunca acessa o PostgreSQL diretamente.
 import { useSyncExternalStore } from "react";
-import { sessaoStore } from "./sessao";
+import { definirSessao } from "./sessao";
 
 export type ComandoSQL = {
   sql: string;
@@ -151,7 +151,7 @@ async function requisitar<T>(metodo: string, url: string, op: Opcoes = {}): Prom
     if (!op.silencioso || !resp.ok) traceStore.adicionar(rastro);
   }
   if (resp.status === 401 && !url.startsWith("/api/auth/")) {
-    sessaoStore.set({ status: "anonimo", expirou: true });
+    definirSessao({ status: "anonimo", expirou: true });
   }
   if (!resp.ok) {
     const msg = typeof dados?.detail === "string" ? dados.detail : `Erro ${resp.status}`;

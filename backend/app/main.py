@@ -52,8 +52,9 @@ app.add_exception_handler(RequestValidationError, tratar_erro_validacao)  # type
 
 @app.middleware("http")
 async def rastrear_sql(request: Request, call_next):
-    """Anexa à resposta o rastro dos comandos SQL executados (cabeçalho X-SQL-Trace)."""
-    if not request.url.path.startswith("/api"):
+    """Anexa à resposta o rastro dos comandos SQL executados (cabeçalho X-SQL-Trace).
+    Somente para o perfil de apresentação; os demais usuários não recebem detalhes técnicos."""
+    if not request.url.path.startswith("/api") or not auth.eh_apresentacao(request):
         return await call_next(request)
     rastro: list = []
     token = db.rastro_sql.set(rastro)

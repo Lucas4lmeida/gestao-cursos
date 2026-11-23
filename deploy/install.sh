@@ -64,10 +64,10 @@ if [ -z "$APP_USUARIOS" ]; then
   # Primeiro acesso: usuário "secretaria" com senha aleatória, legível só pelo root.
   SENHA_INICIAL=$(openssl rand -base64 12 | tr -d '/+=' | cut -c1-14)
   HASH=$(cd "$APP_DIR/backend" && "$APP_DIR/venv/bin/python" -c "import sys; from app.auth import gerar_hash; print(gerar_hash(sys.argv[1]))" "$SENHA_INICIAL")
-  APP_USUARIOS="secretaria:$HASH"
-  install -m 600 /dev/null "$ENV_DIR/credenciais-iniciais.txt"
-  printf 'Usuário: secretaria\nSenha:   %s\n(troque com: sudo bash deploy/definir_senha.sh secretaria)\n' "$SENHA_INICIAL" > "$ENV_DIR/credenciais-iniciais.txt"
-  echo "==> Usuário inicial criado. Veja com: sudo cat $ENV_DIR/credenciais-iniciais.txt"
+  APP_USUARIOS="secretaria:padrao:$HASH"
+  install -m 600 /dev/null "$ENV_DIR/credenciais-secretaria.txt"
+  printf 'Usuário: secretaria\nPerfil:  padrao\nSenha:   %s\n(troque com: sudo bash deploy/definir_senha.sh secretaria)\n' "$SENHA_INICIAL" > "$ENV_DIR/credenciais-secretaria.txt"
+  echo "==> Usuário inicial criado. Veja com: sudo cat $ENV_DIR/credenciais-secretaria.txt"
 fi
 cat > "$ENV_FILE" <<FIM
 # Gerado por deploy/install.sh
@@ -78,6 +78,14 @@ SESSION_SECRET=$SESSION_SECRET
 APP_USUARIOS=$APP_USUARIOS
 FIM
 chown root:gestao "$ENV_FILE"; chmod 640 "$ENV_FILE"
+if [ -f "$ENV_DIR/credenciais-iniciais.txt" ]; then mv "$ENV_DIR/credenciais-iniciais.txt" "$ENV_DIR/credenciais-secretaria.txt"; fi
+
+# Usuário de apresentação (perfil com Console SQL e notas técnicas), criado uma única vez.
+if ! printf '%s' "$APP_USUARIOS" | tr ';' '\n' | grep -q '^[^:]*:apresentacao:'; then
+  echo "==> Criando o usuário de apresentação"
+  bash "$SRC/deploy/definir_senha.sh" apresentacao apresentacao --gerar >/dev/null
+  echo "==> Veja a senha com: sudo cat $ENV_DIR/credenciais-apresentacao.txt"
+fi
 
 echo "==> Ajustes do PF (role gestao_app com privilégio mínimo)"
 (cd /tmp && $PSQL -d "$DB_NAME" -v app_password="$APP_PW" -f "$APP_DIR/database/05_ajustes_pf.sql" >/dev/null)

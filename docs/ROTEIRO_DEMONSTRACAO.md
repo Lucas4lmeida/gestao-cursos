@@ -2,8 +2,10 @@
 
 Antes de começar:
 
-1. Abra a aplicação em **https://134-65-230-190.sslip.io/** e entre com o usuário da secretaria.
-   No rodapé, marque **Modo demonstração técnica**: aparecem o botão **Console SQL**, a tela **Arquitetura** e as notas técnicas.
+1. Abra a aplicação em **https://134-65-230-190.sslip.io/** e entre com o usuário **`apresentacao`**
+   (senha: `sudo cat /etc/gestao-cursos/credenciais-apresentacao.txt` na VM). Esse perfil já entra no
+   **modo demonstração técnica**: botão **Console SQL**, tela **Arquitetura** e notas técnicas.
+   Se quiser mostrar como a secretaria vê o sistema, entre com `secretaria` (sem nenhum detalhe técnico).
 2. Em outra janela, abra o console SQL na VM: `ssh ubuntu@134.65.230.190` e depois `sudo -u postgres psql -d tp3`.
 3. Deixe o **Console SQL** da aplicação (botão escuro à direita do menu) à mão: ele mostra, para cada ação, as 4 etapas
    (front-end → back-end/API → PostgreSQL → retorno) e os comandos SQL exatos.

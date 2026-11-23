@@ -5,16 +5,19 @@ import platform
 
 import fastapi
 import psycopg
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request
 
+from .. import auth
 from ..db import sessao
 
 router = APIRouter(prefix="/api", tags=["Sistema"])
 
 
 @router.get("/saude")
-def saude():
-    """Identifica a instância PostgreSQL usada pelo back-end."""
+def saude(request: Request):
+    """Identifica a instância PostgreSQL usada pelo back-end (somente perfil de apresentação)."""
+    if not auth.eh_apresentacao(request):
+        raise HTTPException(403, "Disponível apenas para o perfil de apresentação.")
     with sessao() as s:
         info = s.um("""
             SELECT version()                     AS versao,

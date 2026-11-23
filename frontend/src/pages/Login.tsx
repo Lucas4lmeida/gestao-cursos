@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Brasao } from "../components/Layout";
 import { Aviso, Botao, Campo, Entrada } from "../components/ui";
 import { ApiError, api } from "../lib/api";
-import { sessaoStore, useSessao } from "../lib/sessao";
+import { definirSessao, useSessao } from "../lib/sessao";
 
 export default function Login() {
   const sessao = useSessao();
@@ -19,7 +19,7 @@ export default function Login() {
     setEnviando(true);
     try {
       const r = await api.post("/api/auth/entrar", { usuario, senha }, { acao: "Entrar no sistema" });
-      sessaoStore.set({ status: "autenticado", usuario: r.usuario });
+      definirSessao({ status: "autenticado", usuario: r.usuario, perfil: r.perfil });
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : "Não foi possível conectar ao servidor.");
     } finally {

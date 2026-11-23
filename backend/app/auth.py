@@ -4,7 +4,11 @@ Os usuários do sistema (equipe da secretaria) ficam na configuração do servid
 (variável APP_USUARIOS em /etc/gestao-cursos/gestao.env), com senha armazenada
 apenas como hash PBKDF2-SHA256. Assim o modelo do banco do TP3 não é alterado.
 
-    APP_USUARIOS="secretaria:pbkdf2_sha256$310000$<sal>$<hash>;outro:..."
+    APP_USUARIOS="secretaria:pbkdf2_sha256$...;apresentacao:apresentacao:pbkdf2_sha256$..."
+
+Cada item é "usuario:hash" (perfil padrão) ou "usuario:perfil:hash". Perfis:
+  * padrao       — uso normal da secretaria (sem informações técnicas);
+  * apresentacao — também vê o Console SQL, as notas técnicas e a tela de arquitetura.
     SESSION_SECRET="<texto aleatório longo>"
 
 Gerar um hash:  python -m app.auth   (pede a senha no terminal)
@@ -48,14 +52,27 @@ def conferir_senha(senha: str, armazenado: str) -> bool:
         return False
 
 
-def _usuarios() -> dict[str, str]:
+PERFIS = ("padrao", "apresentacao")
+
+
+def _usuarios() -> dict[str, tuple[str, str]]:
+    """usuario -> (perfil, hash)."""
     bruto = os.environ.get("APP_USUARIOS", "")
     out = {}
     for item in bruto.split(";"):
-        if ":" in item:
-            u, h = item.split(":", 1)
-            out[u.strip().lower()] = h.strip()
+        partes = [x.strip() for x in item.split(":")]
+        if len(partes) == 2:
+            out[partes[0].lower()] = ("padrao", partes[1])
+        elif len(partes) == 3 and partes[1] in PERFIS:
+            out[partes[0].lower()] = (partes[1], partes[2])
     return out
+
+
+def perfil_de(usuario: str | None) -> str | None:
+    if usuario == "desenvolvimento":
+        return "apresentacao"
+    u = _usuarios().get(usuario or "")
+    return u[0] if u else None
 
 
 # ------------------------------------------------------------------ tokens
@@ -100,6 +117,11 @@ def usuario_da_requisicao(request: Request) -> str | None:
     return ler_token(request.cookies.get(COOKIE))
 
 
+def eh_apresentacao(request: Request) -> bool:
+    """Só o perfil de apresentação recebe detalhes técnicos (SQL executado, instância do banco)."""
+    return perfil_de(usuario_da_requisicao(request)) == "apresentacao"
+
+
 # ------------------------------------------- limite de tentativas por IP
 _falhas: dict[str, deque] = defaultdict(deque)
 JANELA_S, MAX_FALHAS = 300, 8
@@ -124,8 +146,8 @@ def entrar(dados: LoginIn, request: Request, response: Response):
     if _bloqueado(ip):
         raise HTTPException(429, "Muitas tentativas. Aguarde alguns minutos e tente novamente.")
     usuario = dados.usuario.strip().lower()
-    armazenado = _usuarios().get(usuario)
-    if not armazenado or not conferir_senha(dados.senha, armazenado):
+    registro = _usuarios().get(usuario)
+    if not registro or not conferir_senha(dados.senha, registro[1]):
         _falhas[ip].append(time.time())
         raise HTTPException(401, "Usuário ou senha incorretos.")
     _falhas.pop(ip, None)
@@ -133,7 +155,7 @@ def entrar(dados: LoginIn, request: Request, response: Response):
         COOKIE, criar_token(usuario), max_age=DURACAO_S, httponly=True, samesite="lax",
         secure=request.url.scheme == "https", path="/",
     )
-    return {"usuario": usuario}
+    return {"usuario": usuario, "perfil": registro[0]}
 
 
 @router.post("/sair")
@@ -147,7 +169,7 @@ def sessao(request: Request):
     usuario = usuario_da_requisicao(request)
     if not usuario:
         raise HTTPException(401, "Sessão expirada ou inexistente.")
-    return {"usuario": usuario}
+    return {"usuario": usuario, "perfil": perfil_de(usuario)}
 
 
 if __name__ == "__main__":

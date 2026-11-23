@@ -127,7 +127,7 @@ def gerar(repo: str, url_app: str, saida: Path):
               ["<b>Front-end</b>", "<font name='%s'>frontend/src</font> (páginas em <font name='%s'>pages/</font>); "
                                    "o build fica em <font name='%s'>backend/app/static</font>" % (FM, FM, FM),
                "Telas de Painel, Alunos, Professores, Cursos, Disciplinas, Turmas, Matrículas, Relatórios e "
-               "Arquitetura; tela de login; Console SQL com o rastro de cada requisição (ativado pelo <i>modo demonstração técnica</i>, no rodapé)."],
+               "Arquitetura; tela de login; Console SQL com o rastro de cada requisição (somente para o usuário de perfil <i>apresentação</i>)."],
               ["<b>Back-end/API</b>", "<font name='%s'>backend/app/main.py</font> e <font name='%s'>backend/app/routers/*.py</font>" % (FM, FM),
                "API REST em <font name='%s'>/api/*</font>: CRUD, operações compostas, relatórios; traduz erros do banco "
                "(<font name='%s'>erros.py</font>) e serve o front-end." % (FM, FM)],
@@ -176,7 +176,8 @@ def gerar(repo: str, url_app: str, saida: Path):
         ["Erro de integridade", "Aluno com e-mail repetido; excluir curso com turmas; nota 11",
          "23505 uk_pessoa_email; 23503 fk_turma_curso; 23514 ck_matricula_nota"],
     ], [3.3 * cm, 6.3 * cm, W - 9.6 * cm])]
-    h += [Spacer(1, 4), P("Para a demonstração, ative o <b>modo demonstração técnica</b> (rodapé da aplicação). Em todas as ações, o <b>Console SQL</b> da interface mostra as etapas (1) ação no front-end, "
+    h += [Spacer(1, 4), P("A demonstração é feita com o usuário <b>apresentacao</b>, cujo perfil ativa o <b>modo demonstração técnica</b>; "
+                          "os usuários de perfil padrão (secretaria) usam a aplicação sem esses detalhes, e a API não lhes envia o SQL. Em todas as ações, o <b>Console SQL</b> da interface mostra as etapas (1) ação no front-end, "
                           "(2) rota da API, (3) comandos SQL executados no PostgreSQL e (4) retorno (status HTTP e tempo). "
                           "A comprovação no banco é feita com <font name='%s'>psql</font> usando "
                           "<font name='%s'>database/06_verificacao_demo.sql</font>." % (FM, FM))]
@@ -193,7 +194,8 @@ def gerar(repo: str, url_app: str, saida: Path):
                "<font name='%s'>trg_protege_truncate</font> e <font name='%s'>trg_id_imutavel</font> (RR06)." % (FM, FM, FM, FM),
                "Proteções físicas que não mudam o modelo: serializam remoções concorrentes de alocações (RT02), "
                "impedem TRUNCATE que ignoraria RT01/RT02 e tornam as chaves substitutas imutáveis."],
-              ["Autenticação na API (login e sessão) com usuários definidos na configuração do servidor; nenhuma tabela nova.",
+              ["Autenticação na API (login e sessão) com usuários definidos na configuração do servidor, em dois perfis: "
+               "<i>padrão</i> (secretaria) e <i>apresentação</i> (vê o SQL executado); nenhuma tabela nova.",
                "A aplicação será usada por pessoas reais: os dados pessoais de alunos e professores não podem ficar públicos."],
               ["Script <font name='%s'>06_verificacao_demo.sql</font>." % FM,
                "Consultas para comprovar no console SQL cada operação feita pela aplicação."],

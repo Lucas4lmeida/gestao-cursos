@@ -3,7 +3,7 @@ import { LogOut, Menu, Terminal, UserCircle2, X } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { api, consoleSQL, useRastros } from "../lib/api";
-import { definirModoDemo, sessaoStore, useModoDemo, useSessao } from "../lib/sessao";
+import { definirModoDemo, definirSessao, useModoDemo, useSessao } from "../lib/sessao";
 import ConsoleSQL, { SeloMetodo } from "./ConsoleSQL";
 
 export function Brasao({ className }: { className?: string }) {
@@ -67,7 +67,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const sair = async () => {
     try { await api.post("/api/auth/sair", {}, { silencioso: true }); } catch { /* ignora */ }
-    sessaoStore.set({ status: "anonimo" });
+    definirSessao({ status: "anonimo" });
   };
 
   const dataExtenso = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -85,7 +85,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span className="sm:hidden">Secretaria Acadêmica</span>
           <div className="flex items-center gap-4">
             {demo && <span className="hidden rounded bg-ouro-500/20 px-2 py-0.5 font-semibold text-ouro-300 sm:inline">Modo demonstração</span>}
-            <span className="flex items-center gap-1.5"><UserCircle2 className="h-4 w-4" />{sessao.usuario}</span>
+            <span className="flex items-center gap-1.5"><UserCircle2 className="h-4 w-4" />{sessao.usuario}{sessao.perfil === "apresentacao" && <span className="text-brand-300">(apresentação)</span>}</span>
             <button onClick={sair} className="flex items-center gap-1 font-semibold text-white hover:text-ouro-300"><LogOut className="h-3.5 w-3.5" />Sair</button>
           </div>
         </div>
@@ -156,11 +156,11 @@ export default function Layout({ children }: { children: ReactNode }) {
               <div>Sistema de Gestão de Cursos — Projeto Final de Banco de Dados</div>
             </div>
           </div>
-          <label className="flex cursor-pointer items-center gap-2 self-start sm:self-auto">
+          {sessao.perfil === "apresentacao" && <label className="flex cursor-pointer items-center gap-2 self-start sm:self-auto">
             <input type="checkbox" checked={demo} onChange={(e) => definirModoDemo(e.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-brand-800 focus:ring-brand-600" />
             <span>Modo demonstração técnica <span className="text-slate-400">(exibe o SQL executado)</span></span>
-          </label>
+          </label>}
         </div>
       </footer>
 

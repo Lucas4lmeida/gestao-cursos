@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 import Layout from "./components/Layout";
 import "./index.css";
 import { api } from "./lib/api";
-import { sessaoStore, useSessao } from "./lib/sessao";
+import { definirSessao, useSessao } from "./lib/sessao";
 import Alunos from "./pages/Alunos";
 import Arquitetura from "./pages/Arquitetura";
 import Cursos from "./pages/Cursos";
@@ -24,8 +24,8 @@ function App() {
 
   useEffect(() => {
     api.get("/api/auth/sessao", { silencioso: true })
-      .then((r) => sessaoStore.set({ status: "autenticado", usuario: r.usuario }))
-      .catch(() => sessaoStore.set({ status: "anonimo" }));
+      .then((r) => definirSessao({ status: "autenticado", usuario: r.usuario, perfil: r.perfil }))
+      .catch(() => definirSessao({ status: "anonimo" }));
   }, []);
 
   if (sessao.status === "verificando") {
@@ -45,7 +45,7 @@ function App() {
         <Route path="/turmas/:id" element={<TurmaDetalhe />} />
         <Route path="/matriculas" element={<Matriculas />} />
         <Route path="/relatorios" element={<Relatorios />} />
-        <Route path="/arquitetura" element={<Arquitetura />} />
+        {sessao.perfil === "apresentacao" && <Route path="/arquitetura" element={<Arquitetura />} />}
         <Route path="*" element={<Painel />} />
       </Routes>
     </Layout>

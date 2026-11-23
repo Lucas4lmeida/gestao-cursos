@@ -18,25 +18,40 @@ function criarStore<T>(inicial: T) {
 }
 
 // ----------------------------------------------------------------- sessão
-export type EstadoSessao = { status: "verificando" | "anonimo" | "autenticado"; usuario?: string; expirou?: boolean };
+export type Perfil = "padrao" | "apresentacao";
+export type EstadoSessao = { status: "verificando" | "anonimo" | "autenticado"; usuario?: string; perfil?: Perfil; expirou?: boolean };
 export const sessaoStore = criarStore<EstadoSessao>({ status: "verificando" });
 export const useSessao = () => useSyncExternalStore(sessaoStore.inscrever, sessaoStore.get);
 
 // ------------------------------------------------------ modo demonstração
-function lerDemo() {
+// Só existe para o perfil "apresentacao" (o servidor também só envia o SQL a esse perfil).
+// Para esse perfil começa ligado; a preferência fica salva no navegador.
+function lerPreferencia() {
   try {
-    return localStorage.getItem("modoDemo") === "1";
+    return localStorage.getItem("modoDemo") !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
-export const demoStore = criarStore<boolean>(lerDemo());
+let preferencia = lerPreferencia();
+export const demoStore = criarStore<boolean>(false);
 export const useModoDemo = () => useSyncExternalStore(demoStore.inscrever, demoStore.get);
+
+function recalcularDemo() {
+  demoStore.set(sessaoStore.get().perfil === "apresentacao" && preferencia);
+}
+
+export function definirSessao(estado: EstadoSessao) {
+  sessaoStore.set(estado);
+  recalcularDemo();
+}
+
 export function definirModoDemo(v: boolean) {
+  preferencia = v;
   try {
     localStorage.setItem("modoDemo", v ? "1" : "0");
   } catch {
     /* sem armazenamento: vale só nesta aba */
   }
-  demoStore.set(v);
+  recalcularDemo();
 }

@@ -21,21 +21,31 @@ Endereço: **https://134-65-230-190.sslip.io/** (também `http://134.65.230.190/
 | Conexão com o banco | psycopg 3 + psycopg_pool | `backend/app/db.py` |
 | SGBD | PostgreSQL 16 | VM Oracle Cloud (Ubuntu), banco `tp3` |
 
-O front-end nunca acessa o banco: toda operação passa por `/api/*`. Cada resposta da API traz o
-cabeçalho `X-SQL-Trace` com os comandos SQL executados (tempo, linhas, erro). Com o **modo demonstração
-técnica** ligado (caixa no rodapé), a interface mostra o **Console SQL** com a sequência
-*front-end → API → PostgreSQL → retorno*, as notas técnicas (restrições, gatilhos) e a tela **Arquitetura**.
-Com o modo desligado, a interface é a de uso normal da secretaria, sem termos técnicos.
+O front-end nunca acessa o banco: toda operação passa por `/api/*`.
 
-## Acesso (login)
+## Acesso (login) e perfis
 
 Toda rota da API exige sessão. Os usuários ficam em `/etc/gestao-cursos/gestao.env` (`APP_USUARIOS`, senha em
-hash PBKDF2), sem tabelas novas no banco. Na primeira instalação é criado o usuário `secretaria` com senha aleatória:
+hash PBKDF2), sem tabelas novas no banco. Há dois perfis:
+
+| Perfil | Quem usa | O que vê |
+|---|---|---|
+| `padrao` | equipe da secretaria (ex.: `secretaria`) | a aplicação normal, sem termos técnicos |
+| `apresentacao` | a equipe na demonstração (`apresentacao`) | tudo do padrão **e** o modo demonstração técnica |
+
+Para o perfil `apresentacao`, cada resposta da API traz o cabeçalho `X-SQL-Trace` com os comandos SQL
+executados (tempo, linhas, erro), e a interface mostra o **Console SQL** (*front-end → API → PostgreSQL → retorno*),
+as notas técnicas (restrições, gatilhos), o SQL de cada relatório e a tela **Arquitetura**. O modo pode ser
+desligado na caixa do rodapé. Para o perfil `padrao`, o servidor não envia nada disso.
+
+Os dois usuários são criados pelo instalador com senhas aleatórias, legíveis só pelo root:
 
 ```bash
-sudo cat /etc/gestao-cursos/credenciais-iniciais.txt            # senha inicial
-sudo bash ~/gestao-cursos/deploy/definir_senha.sh secretaria     # trocar senha (apaga o arquivo acima)
-sudo bash ~/gestao-cursos/deploy/definir_senha.sh professor1     # criar outro usuário
+sudo cat /etc/gestao-cursos/credenciais-secretaria.txt
+sudo cat /etc/gestao-cursos/credenciais-apresentacao.txt
+sudo bash ~/gestao-cursos/deploy/definir_senha.sh secretaria                  # trocar a senha (pede no terminal)
+sudo bash ~/gestao-cursos/deploy/definir_senha.sh maria padrao --gerar        # novo usuário, senha gerada
+sudo bash ~/gestao-cursos/deploy/definir_senha.sh joao apresentacao           # novo usuário de apresentação
 ```
 
 Regras de negócio não são duplicadas na API: PK, UNIQUE, FK, CHECK e os gatilhos RT01/RT02 são do banco.
@@ -58,7 +68,7 @@ A API traduz o erro (SQLSTATE + nome da restrição) em mensagem amigável (`bac
 | Gatilho | Turma → remover a última alocação; Nova turma sem alocação | `trg_rt02_*` rejeita no `COMMIT` |
 | Erro de integridade | Novo aluno com e-mail repetido; excluir curso com turmas | `23505`, `23503`, `23514` |
 
-O roteiro completo está na tela **Arquitetura** (visível no modo demonstração) e em [`docs/ROTEIRO_DEMONSTRACAO.md`](docs/ROTEIRO_DEMONSTRACAO.md).
+O roteiro completo está na tela **Arquitetura** (perfil `apresentacao`) e em [`docs/ROTEIRO_DEMONSTRACAO.md`](docs/ROTEIRO_DEMONSTRACAO.md).
 Consultas de comprovação no console: [`database/06_verificacao_demo.sql`](database/06_verificacao_demo.sql).
 
 ## Banco de dados
