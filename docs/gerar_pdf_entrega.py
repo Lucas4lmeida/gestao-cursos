@@ -1,7 +1,7 @@
 """Gera docs/PF_Entrega_Gestao_de_Cursos.pdf (documento exigido na entrega do PF).
 
 Uso:  pip install reportlab==4.2.5
-      python docs/gerar_pdf_entrega.py --repo https://github.com/usuario/gestao-cursos
+      python docs/gerar_pdf_entrega.py --repo https://github.com/Lucas4lmeida/gestao-cursos
 """
 from __future__ import annotations
 
@@ -210,7 +210,7 @@ def gerar(repo: str, url_app: str, saida: Path):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo", default="<i>(preencher com o link do repositório)</i>")
+    ap.add_argument("--repo", default="https://github.com/Lucas4lmeida/gestao-cursos")
     ap.add_argument("--url", default="https://134-65-230-190.sslip.io/  (também http://134.65.230.190/)")
     ap.add_argument("--saida", default=str(AQUI / "PF_Entrega_Gestao_de_Cursos.pdf"))
     a = ap.parse_args()

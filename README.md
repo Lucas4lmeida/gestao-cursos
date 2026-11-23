@@ -12,6 +12,8 @@ usando o banco PostgreSQL modelado no TP1, TP2 e TP3.
  React (SPA)          certificado     127.0.0.1:8000, /api/*      pool        mesma VM, 127.0.0.1:5432
 ```
 
+Repositório: **https://github.com/Lucas4lmeida/gestao-cursos**
+
 Endereço: **https://134-65-230-190.sslip.io/** (também `http://134.65.230.190/`). O acesso exige login.
 
 | Camada | Tecnologia | Onde está |
